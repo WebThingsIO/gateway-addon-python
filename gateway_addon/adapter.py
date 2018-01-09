@@ -157,4 +157,3 @@ class Adapter:
     def unload(self):
         """Perform any necessary cleanup before adapter is shut down."""
         print('Adapter:', self.name, 'unloaded')
-        self.manager_proxy.running = False

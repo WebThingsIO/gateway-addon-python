@@ -28,6 +28,11 @@ class AddonManagerProxy:
         self.thread = threading.Thread(target=self.recv)
         self.thread.start()
 
+    def close(self):
+        """Close the proxy."""
+        self.running = False
+        self.socket.close()
+
     def add_adapter(self, adapter):
         """
         Send a notification that an adapter has been added.
