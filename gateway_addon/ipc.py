@@ -1,5 +1,6 @@
 """IPC client to communicate with the Gateway."""
 
+from nnpy.errors import NNError
 import json
 import nnpy
 
@@ -24,14 +25,23 @@ class IpcClient:
         if verbose:
             print('IpcClient: Connected to server, registering...')
 
-        self.manager_socket.send(json.dumps({
-            'messageType': 'registerPlugin',
-            'data': {
-                'pluginId': plugin_id,
-            }
-        }))
+        try:
+            self.manager_socket.send(json.dumps({
+                'messageType': 'registerPlugin',
+                'data': {
+                    'pluginId': plugin_id,
+                }
+            }))
+        except NNError as e:
+            print('IpcClient: Failed to send message: {}'.format(e))
+            return
 
-        resp = self.manager_socket.recv()
+        try:
+            resp = self.manager_socket.recv()
+        except NNError as e:
+            print('IpcClient: Error receiving message: {}'.format(e))
+            return
+
         if verbose:
             print('IpcClient: Received manager message:', resp)
 

@@ -1,5 +1,6 @@
 """Proxy for sending messages between the Gateway and an add-on."""
 
+from nnpy.errors import NNError
 import json
 import threading
 
@@ -26,12 +27,17 @@ class AddonManagerProxy:
         self.verbose = verbose
         self.running = True
         self.thread = threading.Thread(target=self.recv)
+        self.thread.daemon = True
         self.thread.start()
 
     def close(self):
         """Close the proxy."""
         self.running = False
-        self.socket.close()
+
+        try:
+            self.socket.close()
+        except NNError:
+            pass
 
     def add_adapter(self, adapter):
         """
@@ -99,15 +105,23 @@ class AddonManagerProxy:
 
         data['pluginId'] = self.plugin_id
 
-        self.socket.send(json.dumps({
-            'messageType': msg_type,
-            'data': data,
-        }))
+        try:
+            self.socket.send(json.dumps({
+                'messageType': msg_type,
+                'data': data,
+            }))
+        except NNError as e:
+            print('AddonManagerProxy: Failed to send message: {}'.format(e))
 
     def recv(self):
         """Read a message from the IPC socket."""
         while self.running:
-            msg = self.socket.recv()
+            try:
+                msg = self.socket.recv()
+            except NNError as e:
+                print('AddonManagerProxy: Error receiving message from '
+                      'socket: {}'.format(e))
+                break
 
             if self.verbose:
                 print('AddonMangerProxy: recv:', msg)

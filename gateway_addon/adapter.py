@@ -34,6 +34,10 @@ class Adapter:
                                                verbose=verbose)
         self.manager_proxy.add_adapter(self)
 
+    def close_proxy(self):
+        """Close the manager proxy."""
+        self.manager_proxy.close()
+
     def dump(self):
         """Dump the state of the adapter to the log."""
         print('Adapter:', self.name, '- dump() not implemented')
