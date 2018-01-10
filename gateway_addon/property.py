@@ -20,7 +20,7 @@ class Property:
         fields = ['type', 'unit', 'description', 'min', 'max']
         for field in fields:
             if field in description:
-                self.description['field'] = description['field']
+                self.description[field] = description[field]
 
     def as_dict(self):
         """
@@ -51,7 +51,8 @@ class Property:
 
         Returns the value that was set.
         """
-        if self.type == 'boolean':
+        if 'type' in self.description and \
+                self.description['type'] == 'boolean':
             self.value = bool(value)
         else:
             self.value = value

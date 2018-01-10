@@ -148,16 +148,21 @@ class AddonManagerProxy:
 
             # High-level adapter messages
             if msg_type == 'startPairing':
-                self.adapter.start_pairing(msg['data']['timeout'])
+                self.make_thread(self.adapter.start_pairing,
+                                 args=(msg['data']['timeout'],))
                 continue
 
             if msg_type == 'cancelPairing':
-                self.adapter.cancel_pairing()
+                self.make_thread(self.adapter.cancel_pairing)
                 continue
 
             if msg_type == 'unloadAdapter':
-                self.adapter.unload()
-                self.send('adapterUnloaded', {'adapterId', self.adapter.id})
+                def unload_fn(proxy):
+                    proxy.adapter.unload()
+                    proxy.send('adapterUnloaded',
+                               {'adapterId', proxy.adapter.id})
+
+                self.make_thread(unload_fn, args=(self,))
                 continue
 
             if msg_type == 'unloadPlugin':
@@ -170,19 +175,29 @@ class AddonManagerProxy:
                       'ignoring.')
                 continue
 
-            device_id = msg['data']['device_id']
+            device_id = msg['data']['deviceId']
             if msg_type == 'removeThing':
-                self.adapter.remove_thing(device_id)
+                self.make_thread(self.adapter.remove_thing, args=(device_id,))
                 continue
 
             if msg_type == 'cancelRemoveThing':
-                self.adapter.cancel_remove_thing(device_id)
+                self.make_thread(self.adapter.cancel_remove_thing,
+                                 args=(device_id,))
                 continue
 
             if msg_type == 'setProperty':
-                dev = self.adapter.get_device(device_id)
-                if dev:
-                    prop = dev.get_property(msg['data']['propertyName'])
-                    if prop:
-                        prop.set_value(msg['data']['propertyValue'])
-                        continue
+                def set_prop_fn(proxy):
+                    dev = proxy.adapter.get_device(device_id)
+                    if dev:
+                        prop = dev.find_property(msg['data']['propertyName'])
+                        if prop:
+                            prop.set_value(msg['data']['propertyValue'])
+
+                self.make_thread(set_prop_fn, args=(self,))
+                continue
+
+    @staticmethod
+    def make_thread(target, args=()):
+        t = threading.Thread(target=target, args=args)
+        t.daemon = True
+        t.start()
