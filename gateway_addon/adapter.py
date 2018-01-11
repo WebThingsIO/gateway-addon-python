@@ -1,7 +1,6 @@
 """High-level Adapter base class implementation."""
 
 from .addon_manager_proxy import AddonManagerProxy
-from .ipc import IpcClient
 
 
 class Adapter:
@@ -28,11 +27,12 @@ class Adapter:
         # False in it's constructor.
         self.ready = True
 
-        self.ipc_client = IpcClient(self.id, verbose=verbose)
-        self.manager_proxy = AddonManagerProxy(self.ipc_client.plugin_socket,
-                                               self.id,
-                                               verbose=verbose)
+        self.manager_proxy = AddonManagerProxy(self.id, verbose=verbose)
         self.manager_proxy.add_adapter(self)
+
+    def proxy_running(self):
+        """Return boolean indicating whether or not the proxy is running."""
+        return self.manager_proxy.running
 
     def close_proxy(self):
         """Close the manager proxy."""
@@ -40,7 +40,7 @@ class Adapter:
 
     def dump(self):
         """Dump the state of the adapter to the log."""
-        print('Adapter:', self.name, '- dump() not implemented')
+        print('Adapter:', self.name, '- dump() not implemented', flush=True)
 
     def get_id(self):
         """
@@ -130,11 +130,13 @@ class Adapter:
 
         timeout -- Timeout in seconds at which to quit pairing
         """
-        print('Adapter:', self.name, 'id', self.id, 'pairing started')
+        print('Adapter:', self.name, 'id', self.id, 'pairing started',
+              flush=True)
 
     def cancel_pairing(self):
         """Cancel the pairing process."""
-        print('Adapter:', self.name, 'id', self.id, 'pairing cancelled')
+        print('Adapter:', self.name, 'id', self.id, 'pairing cancelled',
+              flush=True)
 
     def remove_thing(self, device_id):
         """
@@ -145,7 +147,8 @@ class Adapter:
         device = self.get_device(device_id)
         if device:
             print('Adapter:', self.name, 'id', self.id,
-                  'remove_thing(' + device.id + ')')
+                  'remove_thing(' + device.id + ')',
+                  flush=True)
 
     def cancel_remove_thing(self, device_id):
         """
@@ -156,8 +159,9 @@ class Adapter:
         device = self.get_device(device_id)
         if device:
             print('Adapter:', self.name, 'id', self.id,
-                  'cancel_remove_thing(' + device.id + ')')
+                  'cancel_remove_thing(' + device.id + ')',
+                  flush=True)
 
     def unload(self):
         """Perform any necessary cleanup before adapter is shut down."""
-        print('Adapter:', self.name, 'unloaded')
+        print('Adapter:', self.name, 'unloaded', flush=True)

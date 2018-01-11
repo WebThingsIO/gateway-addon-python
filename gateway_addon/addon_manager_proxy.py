@@ -4,6 +4,8 @@ from nnpy.errors import NNError
 import json
 import threading
 
+from .ipc import IpcClient
+
 
 class AddonManagerProxy:
     """
@@ -13,16 +15,15 @@ class AddonManagerProxy:
     to be handled by add-ons and sends back responses as appropriate.
     """
 
-    def __init__(self, socket, plugin_id, verbose=False):
+    def __init__(self, plugin_id, verbose=False):
         """
         Initialize the object.
 
-        socket -- the IPC socket
         plugin_id -- ID of this plugin
         verbose -- whether or not to enable verbose logging
         """
         self.adapter = None
-        self.socket = socket
+        self.ipc_client = IpcClient(plugin_id, verbose=verbose)
         self.plugin_id = plugin_id
         self.verbose = verbose
         self.running = True
@@ -35,7 +36,8 @@ class AddonManagerProxy:
         self.running = False
 
         try:
-            self.socket.close()
+            self.ipc_client.manager_socket.close()
+            self.ipc_client.plugin_socket.close()
         except NNError:
             pass
 
@@ -46,12 +48,13 @@ class AddonManagerProxy:
         adapter -- the Adapter that was added
         """
         if self.verbose:
-            print('AddonManagerProxy: add_adapter:', adapter.id)
+            print('AddonManagerProxy: add_adapter:', adapter.id, flush=True)
 
         self.adapter = adapter
         self.send('addAdapter', {
             'adapterId': adapter.id,
-            'name': adapter.name
+            'name': adapter.name,
+            'packageName': adapter.package_name,
         })
 
     def handle_device_added(self, device):
@@ -61,7 +64,8 @@ class AddonManagerProxy:
         device -- the Device that was added
         """
         if self.verbose:
-            print('AddonManagerProxy: handle_device_added:', device.id)
+            print('AddonManagerProxy: handle_device_added:', device.id,
+                  flush=True)
 
         device_dict = device.as_dict()
         device_dict['adapterId'] = device.adapter.id
@@ -74,7 +78,8 @@ class AddonManagerProxy:
         device -- the Device that was removed
         """
         if self.verbose:
-            print('AddonManagerProxy: handle_device_removed:', device.id)
+            print('AddonManagerProxy: handle_device_removed:', device.id,
+                  flush=True)
 
         self.send('handleDeviceRemoved', {
             'adapterId': device.adapter.id,
@@ -106,42 +111,44 @@ class AddonManagerProxy:
         data['pluginId'] = self.plugin_id
 
         try:
-            self.socket.send(json.dumps({
+            self.ipc_client.plugin_socket.send(json.dumps({
                 'messageType': msg_type,
                 'data': data,
             }))
         except NNError as e:
-            print('AddonManagerProxy: Failed to send message: {}'.format(e))
+            print('AddonManagerProxy: Failed to send message: {}'.format(e),
+                  flush=True)
 
     def recv(self):
         """Read a message from the IPC socket."""
         while self.running:
             try:
-                msg = self.socket.recv()
+                msg = self.ipc_client.plugin_socket.recv()
             except NNError as e:
                 print('AddonManagerProxy: Error receiving message from '
-                      'socket: {}'.format(e))
+                      'socket: {}'.format(e), flush=True)
                 break
 
             if self.verbose:
-                print('AddonMangerProxy: recv:', msg)
+                print('AddonMangerProxy: recv:', msg, flush=True)
 
             if not msg:
                 break
 
             if not self.adapter:
                 print('AddonManagerProxy: No adapter added yet, ignoring '
-                      'message.')
+                      'message.', flush=True)
                 continue
 
             try:
                 msg = json.loads(msg)
             except ValueError:
-                print('AddonManagerProxy: Error parsing message as JSON')
+                print('AddonManagerProxy: Error parsing message as JSON',
+                      flush=True)
                 continue
 
             if 'messageType' not in msg:
-                print('AddonManagerProxy: Invalid message')
+                print('AddonManagerProxy: Invalid message', flush=True)
                 continue
 
             msg_type = msg['messageType']
@@ -160,19 +167,20 @@ class AddonManagerProxy:
                 def unload_fn(proxy):
                     proxy.adapter.unload()
                     proxy.send('adapterUnloaded',
-                               {'adapterId', proxy.adapter.id})
+                               {'adapterId': proxy.adapter.id})
 
                 self.make_thread(unload_fn, args=(self,))
                 continue
 
             if msg_type == 'unloadPlugin':
                 self.send('pluginUnloaded', {})
-                continue
+                self.close()
+                break
 
             # All messages from here on are assumed to require a valid deviceId
             if 'data' not in msg or 'deviceId' not in msg['data']:
                 print('AddonManagerProxy: No deviceId present in message, '
-                      'ignoring.')
+                      'ignoring.', flush=True)
                 continue
 
             device_id = msg['data']['deviceId']

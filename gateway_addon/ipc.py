@@ -23,7 +23,7 @@ class IpcClient:
             self.manager_socket.connect(_IPC_BASE + 'gateway.addonManager')
 
         if verbose:
-            print('IpcClient: Connected to server, registering...')
+            print('IpcClient: Connected to server, registering...', flush=True)
 
         try:
             self.manager_socket.send(json.dumps({
@@ -33,17 +33,20 @@ class IpcClient:
                 }
             }))
         except NNError as e:
-            print('IpcClient: Failed to send message: {}'.format(e))
+            print('IpcClient: Failed to send message: {}'.format(e),
+                  flush=True)
             return
 
         try:
             resp = self.manager_socket.recv()
         except NNError as e:
-            print('IpcClient: Error receiving message: {}'.format(e))
+            print('IpcClient: Error receiving message: {}'.format(e),
+                  flush=True)
             return
 
         if verbose:
-            print('IpcClient: Received manager message:', resp)
+            print('IpcClient: Received manager message: {}'.format(resp),
+                  flush=True)
 
         try:
             resp = json.loads(resp)
@@ -56,7 +59,7 @@ class IpcClient:
                 _IPC_BASE + resp['data']['ipcBaseAddr'])
 
             if verbose:
-                print('IpcClient: Registered with PluginServer')
+                print('IpcClient: Registered with PluginServer', flush=True)
         except ValueError:
-            print('IpcClient: Unexpected registration reply from gateway:',
-                  resp)
+            print('IpcClient: Unexpected registration reply from gateway: {}'
+                  .format(resp), flush=True)
