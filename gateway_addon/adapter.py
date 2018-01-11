@@ -1,6 +1,11 @@
 """High-level Adapter base class implementation."""
 
+import functools
+
 from .addon_manager_proxy import AddonManagerProxy
+
+
+print = functools.partial(print, flush=True)
 
 
 class Adapter:
@@ -40,7 +45,7 @@ class Adapter:
 
     def dump(self):
         """Dump the state of the adapter to the log."""
-        print('Adapter:', self.name, '- dump() not implemented', flush=True)
+        print('Adapter:', self.name, '- dump() not implemented')
 
     def get_id(self):
         """
@@ -130,13 +135,11 @@ class Adapter:
 
         timeout -- Timeout in seconds at which to quit pairing
         """
-        print('Adapter:', self.name, 'id', self.id, 'pairing started',
-              flush=True)
+        print('Adapter:', self.name, 'id', self.id, 'pairing started')
 
     def cancel_pairing(self):
         """Cancel the pairing process."""
-        print('Adapter:', self.name, 'id', self.id, 'pairing cancelled',
-              flush=True)
+        print('Adapter:', self.name, 'id', self.id, 'pairing cancelled')
 
     def remove_thing(self, device_id):
         """
@@ -147,8 +150,7 @@ class Adapter:
         device = self.get_device(device_id)
         if device:
             print('Adapter:', self.name, 'id', self.id,
-                  'remove_thing(' + device.id + ')',
-                  flush=True)
+                  'remove_thing(' + device.id + ')')
 
     def cancel_remove_thing(self, device_id):
         """
@@ -159,9 +161,8 @@ class Adapter:
         device = self.get_device(device_id)
         if device:
             print('Adapter:', self.name, 'id', self.id,
-                  'cancel_remove_thing(' + device.id + ')',
-                  flush=True)
+                  'cancel_remove_thing(' + device.id + ')')
 
     def unload(self):
         """Perform any necessary cleanup before adapter is shut down."""
-        print('Adapter:', self.name, 'unloaded', flush=True)
+        print('Adapter:', self.name, 'unloaded')

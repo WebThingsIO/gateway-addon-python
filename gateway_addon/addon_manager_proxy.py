@@ -1,10 +1,13 @@
 """Proxy for sending messages between the Gateway and an add-on."""
 
 from nnpy.errors import NNError
+import functools
 import json
 import threading
 
 from .ipc import IpcClient
+
+print = functools.partial(print, flush=True)
 
 
 class AddonManagerProxy:
@@ -48,7 +51,7 @@ class AddonManagerProxy:
         adapter -- the Adapter that was added
         """
         if self.verbose:
-            print('AddonManagerProxy: add_adapter:', adapter.id, flush=True)
+            print('AddonManagerProxy: add_adapter:', adapter.id)
 
         self.adapter = adapter
         self.send('addAdapter', {
@@ -64,8 +67,7 @@ class AddonManagerProxy:
         device -- the Device that was added
         """
         if self.verbose:
-            print('AddonManagerProxy: handle_device_added:', device.id,
-                  flush=True)
+            print('AddonManagerProxy: handle_device_added:', device.id)
 
         device_dict = device.as_dict()
         device_dict['adapterId'] = device.adapter.id
@@ -78,8 +80,7 @@ class AddonManagerProxy:
         device -- the Device that was removed
         """
         if self.verbose:
-            print('AddonManagerProxy: handle_device_removed:', device.id,
-                  flush=True)
+            print('AddonManagerProxy: handle_device_removed:', device.id)
 
         self.send('handleDeviceRemoved', {
             'adapterId': device.adapter.id,
@@ -116,8 +117,7 @@ class AddonManagerProxy:
                 'data': data,
             }))
         except NNError as e:
-            print('AddonManagerProxy: Failed to send message: {}'.format(e),
-                  flush=True)
+            print('AddonManagerProxy: Failed to send message: {}'.format(e))
 
     def recv(self):
         """Read a message from the IPC socket."""
@@ -126,29 +126,28 @@ class AddonManagerProxy:
                 msg = self.ipc_client.plugin_socket.recv()
             except NNError as e:
                 print('AddonManagerProxy: Error receiving message from '
-                      'socket: {}'.format(e), flush=True)
+                      'socket: {}'.format(e))
                 break
 
             if self.verbose:
-                print('AddonMangerProxy: recv:', msg, flush=True)
+                print('AddonMangerProxy: recv:', msg)
 
             if not msg:
                 break
 
             if not self.adapter:
                 print('AddonManagerProxy: No adapter added yet, ignoring '
-                      'message.', flush=True)
+                      'message.')
                 continue
 
             try:
                 msg = json.loads(msg)
             except ValueError:
-                print('AddonManagerProxy: Error parsing message as JSON',
-                      flush=True)
+                print('AddonManagerProxy: Error parsing message as JSON')
                 continue
 
             if 'messageType' not in msg:
-                print('AddonManagerProxy: Invalid message', flush=True)
+                print('AddonManagerProxy: Invalid message')
                 continue
 
             msg_type = msg['messageType']
@@ -180,7 +179,7 @@ class AddonManagerProxy:
             # All messages from here on are assumed to require a valid deviceId
             if 'data' not in msg or 'deviceId' not in msg['data']:
                 print('AddonManagerProxy: No deviceId present in message, '
-                      'ignoring.', flush=True)
+                      'ignoring.')
                 continue
 
             device_id = msg['data']['deviceId']
@@ -206,6 +205,12 @@ class AddonManagerProxy:
 
     @staticmethod
     def make_thread(target, args=()):
+        """
+        Start up a thread in the background.
+
+        target -- the target function
+        args -- arguments to pass to target
+        """
         t = threading.Thread(target=target, args=args)
         t.daemon = True
         t.start()
