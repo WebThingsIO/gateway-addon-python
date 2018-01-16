@@ -34,7 +34,7 @@ class IpcClient:
                 'data': {
                     'pluginId': plugin_id,
                 }
-            }))
+            }).encode('utf-8'))
         except NNError as e:
             print('IpcClient: Failed to send message: {}'.format(e))
             return
@@ -49,7 +49,7 @@ class IpcClient:
             print('IpcClient: Received manager message: {}'.format(resp))
 
         try:
-            resp = json.loads(resp)
+            resp = json.loads(resp.decode('utf-8'))
             if not resp or 'messageType' not in resp or \
                     resp['messageType'] != 'registerPluginReply':
                 raise ValueError()

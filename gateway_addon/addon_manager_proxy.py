@@ -115,7 +115,7 @@ class AddonManagerProxy:
             self.ipc_client.plugin_socket.send(json.dumps({
                 'messageType': msg_type,
                 'data': data,
-            }))
+            }).encode('utf-8'))
         except NNError as e:
             print('AddonManagerProxy: Failed to send message: {}'.format(e))
 
@@ -141,7 +141,7 @@ class AddonManagerProxy:
                 continue
 
             try:
-                msg = json.loads(msg)
+                msg = json.loads(msg.decode('utf-8'))
             except ValueError:
                 print('AddonManagerProxy: Error parsing message as JSON')
                 continue
