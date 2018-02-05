@@ -17,6 +17,7 @@ class Property:
         self.value = None
         self.description = {}
         self.visible = True
+        self.fire_and_forget = False
 
         if 'visible' in description:
             self.visible = description['visible']
