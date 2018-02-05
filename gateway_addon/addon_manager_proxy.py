@@ -199,6 +199,8 @@ class AddonManagerProxy:
                         prop = dev.find_property(msg['data']['propertyName'])
                         if prop:
                             prop.set_value(msg['data']['propertyValue'])
+                            if prop.fire_and_forget:
+                                self.send_property_changed_notification(prop)
 
                 self.make_thread(set_prop_fn, args=(self,))
                 continue
