@@ -14,6 +14,8 @@ _DB_PATHS = [
                  '.mozilla-iot',
                  'config',
                  'db.sqlite3'),
+    os.path.join('.', 'db.sqlite3'),               # if cwd is the gateway dir
+    os.path.join('..', '..', '..', 'db.sqlite3'),  # if cwd is the add-on dir
 ]
 
 if 'MOZIOT_HOME' in os.environ:
