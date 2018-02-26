@@ -25,7 +25,7 @@ class AddonManagerProxy:
         plugin_id -- ID of this plugin
         verbose -- whether or not to enable verbose logging
         """
-        self.adapter = None
+        self.adapters = {}
         self.ipc_client = IpcClient(plugin_id, verbose=verbose)
         self.plugin_id = plugin_id
         self.verbose = verbose
@@ -53,7 +53,7 @@ class AddonManagerProxy:
         if self.verbose:
             print('AddonManagerProxy: add_adapter:', adapter.id)
 
-        self.adapter = adapter
+        self.adapters[adapter.id] = adapter
         self.send('addAdapter', {
             'adapterId': adapter.id,
             'name': adapter.name,
@@ -135,11 +135,6 @@ class AddonManagerProxy:
             if not msg:
                 break
 
-            if not self.adapter:
-                print('AddonManagerProxy: No adapter added yet, ignoring '
-                      'message.')
-                continue
-
             try:
                 msg = json.loads(msg.decode('utf-8'))
             except ValueError:
@@ -152,29 +147,42 @@ class AddonManagerProxy:
 
             msg_type = msg['messageType']
 
-            # High-level adapter messages
-            if msg_type == 'startPairing':
-                self.make_thread(self.adapter.start_pairing,
-                                 args=(msg['data']['timeout'],))
-                continue
-
-            if msg_type == 'cancelPairing':
-                self.make_thread(self.adapter.cancel_pairing)
-                continue
-
-            if msg_type == 'unloadAdapter':
-                def unload_fn(proxy):
-                    proxy.adapter.unload()
-                    proxy.send('adapterUnloaded',
-                               {'adapterId': proxy.adapter.id})
-
-                self.make_thread(unload_fn, args=(self,))
-                continue
-
             if msg_type == 'unloadPlugin':
                 self.send('pluginUnloaded', {})
                 self.close()
                 break
+
+            if 'data' not in msg or 'adapterId' not in msg['data']:
+                print('AddonManagerProxy: Adapter ID not present in message.')
+                continue
+
+            adapter_id = msg['data']['adapterId']
+            if adapter_id not in self.adapters:
+                print('AddonManagerProxy: Unrecognized adapter, ignoring '
+                      'message.')
+                continue
+
+            adapter = self.adapters[adapter_id]
+
+            # High-level adapter messages
+            if msg_type == 'startPairing':
+                self.make_thread(adapter.start_pairing,
+                                 args=(msg['data']['timeout'],))
+                continue
+
+            if msg_type == 'cancelPairing':
+                self.make_thread(adapter.cancel_pairing)
+                continue
+
+            if msg_type == 'unloadAdapter':
+                def unload_fn(proxy, adapter):
+                    adapter.unload()
+                    proxy.send('adapterUnloaded',
+                               {'adapterId': adapter.id})
+
+                self.make_thread(unload_fn, args=(self, adapter))
+                del self.adapters[adapter.id]
+                continue
 
             # All messages from here on are assumed to require a valid deviceId
             if 'data' not in msg or 'deviceId' not in msg['data']:
@@ -184,17 +192,17 @@ class AddonManagerProxy:
 
             device_id = msg['data']['deviceId']
             if msg_type == 'removeThing':
-                self.make_thread(self.adapter.remove_thing, args=(device_id,))
+                self.make_thread(adapter.remove_thing, args=(device_id,))
                 continue
 
             if msg_type == 'cancelRemoveThing':
-                self.make_thread(self.adapter.cancel_remove_thing,
+                self.make_thread(adapter.cancel_remove_thing,
                                  args=(device_id,))
                 continue
 
             if msg_type == 'setProperty':
-                def set_prop_fn(proxy):
-                    dev = proxy.adapter.get_device(device_id)
+                def set_prop_fn(proxy, adapter):
+                    dev = adapter.get_device(device_id)
                     if dev:
                         prop = dev.find_property(msg['data']['propertyName'])
                         if prop:
@@ -202,7 +210,7 @@ class AddonManagerProxy:
                             if prop.fire_and_forget:
                                 self.send_property_changed_notification(prop)
 
-                self.make_thread(set_prop_fn, args=(self,))
+                self.make_thread(set_prop_fn, args=(self, adapter))
                 continue
 
     @staticmethod
