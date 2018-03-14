@@ -152,6 +152,8 @@ class Adapter:
             print('Adapter:', self.name, 'id', self.id,
                   'remove_thing(' + device.id + ')')
 
+            self.handle_device_removed(device)
+
     def cancel_remove_thing(self, device_id):
         """
         Cancel unpairing of a device.
