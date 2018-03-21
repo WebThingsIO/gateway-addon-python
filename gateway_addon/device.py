@@ -30,6 +30,7 @@ class Device:
             'id': self.id,
             'name': self.name,
             'type': self.type,
+            'description': self.description,
             'properties': properties,
             'actions': self.actions,
         }
