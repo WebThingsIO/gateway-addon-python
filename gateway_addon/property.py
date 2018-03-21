@@ -22,7 +22,14 @@ class Property:
         if 'visible' in description:
             self.visible = description['visible']
 
-        fields = ['type', 'unit', 'description', 'min', 'max']
+        # Check 'min' and 'max' for backwards compatibility
+        if 'min' in description:
+            self.description['minimum'] = description['min']
+
+        if 'max' in description:
+            self.description['maximum'] = description['max']
+
+        fields = ['type', 'unit', 'description', 'minimum', 'maximum']
         for field in fields:
             if field in description:
                 self.description[field] = description[field]
