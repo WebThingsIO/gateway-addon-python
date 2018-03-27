@@ -13,7 +13,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='gateway_addon',
-    version='0.2.0',
+    version='0.4.0',
     description='Bindings for Mozilla IoT Gateway add-ons',
     long_description=long_description,
     url='https://github.com/mozilla-iot/gateway-addon-python',
