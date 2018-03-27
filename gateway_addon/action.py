@@ -58,34 +58,6 @@ class Action:
             'timeCompleted': self.time_completed,
         }
 
-    def get_id(self):
-        """Get this action's ID."""
-        return self.id
-
-    def get_name(self):
-        """Get this action's name."""
-        return self.name
-
-    def get_status(self):
-        """Get this action's status."""
-        return self.status
-
-    def get_device(self):
-        """Get the device associated with this action."""
-        return self.device
-
-    def get_time_requested(self):
-        """Get the time the action was requested."""
-        return self.time_requested
-
-    def get_time_completed(self):
-        """Get the time the action was completed."""
-        return self.time_completed
-
-    def get_input(self):
-        """Get the inputs for this action."""
-        return self.input
-
     def start(self):
         """Start performing the action."""
         self.status = 'pending'

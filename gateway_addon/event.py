@@ -46,19 +46,3 @@ class Event:
             'data': self.data,
             'timestamp': self.timestamp,
         }
-
-    def get_device(self):
-        """Get the device associated with this event."""
-        return self.device
-
-    def get_name(self):
-        """Get the event's name."""
-        return self.name
-
-    def get_data(self):
-        """Get the event's data."""
-        return self.data
-
-    def get_timestamp(self):
-        """Get the event's timestamp."""
-        return self.timestamp
