@@ -1,5 +1,7 @@
 """High-level Device base class implementation."""
 
+from .action import Action
+
 
 class Device:
     """A Device represents a physical object being managed by an Adapter."""
@@ -18,6 +20,7 @@ class Device:
         self.description = ''
         self.properties = {}
         self.actions = {}
+        self.events = {}
 
     def as_dict(self):
         """
@@ -33,6 +36,7 @@ class Device:
             'description': self.description,
             'properties': properties,
             'actions': self.actions,
+            'events': self.events,
         }
 
     def as_thing(self):
@@ -129,6 +133,22 @@ class Device:
         """
         self.adapter.manager_proxy.send_property_changed_notification(prop)
 
+    def action_notify(self, action):
+        """
+        Notify the AddonManager in the Gateway that an action's status changed.
+
+        action -- the action whose status changed
+        """
+        self.adapter.manager_proxy.send_action_status_notification(action)
+
+    def event_notify(self, event):
+        """
+        Notify the AddonManager in the Gateway that an event occurred.
+
+        event -- the event that occurred
+        """
+        self.adapter.manager_proxy.send_event_notification(event)
+
     def set_property(self, property_name, value):
         """
         Set a property value.
@@ -141,3 +161,55 @@ class Device:
             return
 
         prop.set_value(value)
+
+    def request_action(self, action_id, action_name, action_input):
+        """
+        Request that a new action be performed.
+
+        action_id -- ID of the new action
+        action_name -- name of the action
+        action_input -- any inputs to the action
+        """
+        if action_name not in self.actions:
+            return
+
+        action = Action(action_id, self, action_name, action_input)
+        self.perform_action(action)
+
+    def perform_action(self, action):
+        """
+        Do anything necessary to perform the given action.
+
+        action -- the action to perform
+        """
+        pass
+
+    def add_action(self, name, metadata):
+        """
+        Add an action.
+
+        name -- name of the action
+        metadata -- action metadata, i.e. type, description, etc., as a dict
+        """
+        if not metadata:
+            metadata = {}
+
+        if 'href' in metadata:
+            del metadata['href']
+
+        self.actions[name] = metadata
+
+    def add_event(self, name, metadata):
+        """
+        Add an event.
+
+        name -- name of the event
+        metadata -- event metadata, i.e. type, description, etc., as a dict
+        """
+        if not metadata:
+            metadata = {}
+
+        if 'href' in metadata:
+            del metadata['href']
+
+        self.events[name] = metadata

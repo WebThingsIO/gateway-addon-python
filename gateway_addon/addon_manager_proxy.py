@@ -99,6 +99,30 @@ class AddonManagerProxy:
             'property': prop.as_dict(),
         })
 
+    def send_action_status_notification(self, action):
+        """
+        Send a notification that an action's status changed.
+
+        action -- the action whose status changed
+        """
+        self.send('actionStatus', {
+            'adapterId': action.device.adapter.id,
+            'deviceId': action.device.id,
+            'action': action.as_dict(),
+        })
+
+    def send_event_notification(self, event):
+        """
+        Send a notification that an event occurred.
+
+        event -- the event that occurred
+        """
+        self.send('event', {
+            'adapterId': event.device.adapter.id,
+            'deviceId': event.device.id,
+            'event': event.as_dict(),
+        })
+
     def send(self, msg_type, data):
         """
         Send a message through the IPC socket.
@@ -212,6 +236,21 @@ class AddonManagerProxy:
 
                 self.make_thread(set_prop_fn, args=(self, adapter))
                 continue
+
+            if msg_type == 'requestAction':
+                def request_action_fn(proxy, adapter):
+                    dev = adapter.get_device(device_id)
+
+                    action_input = None
+                    if 'input' in msg['data']:
+                        action_input = msg['data']['input']
+
+                    if dev:
+                        dev.request_action(msg['data']['actionName'],
+                                           msg['data']['actionId'],
+                                           action_input)
+
+                self.make_thread(request_action_fn, args=(self, adapter))
 
     @staticmethod
     def make_thread(target, args=()):
