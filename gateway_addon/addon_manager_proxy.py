@@ -246,11 +246,23 @@ class AddonManagerProxy:
                         action_input = msg['data']['input']
 
                     if dev:
-                        dev.request_action(msg['data']['actionName'],
-                                           msg['data']['actionId'],
+                        dev.request_action(msg['data']['actionId'],
+                                           msg['data']['actionName'],
                                            action_input)
 
                 self.make_thread(request_action_fn, args=(self, adapter))
+                continue
+
+            if msg_type == 'removeAction':
+                def remove_action_fn(proxy, adapter):
+                    dev = adapter.get_device(device_id)
+
+                    if dev:
+                        dev.remove_action(msg['data']['actionId'],
+                                          msg['data']['actionName'])
+
+                self.make_thread(remove_action_fn, args=(self, adapter))
+                continue
 
     @staticmethod
     def make_thread(target, args=()):

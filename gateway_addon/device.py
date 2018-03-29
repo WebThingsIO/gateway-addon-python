@@ -176,11 +176,32 @@ class Device:
         action = Action(action_id, self, action_name, action_input)
         self.perform_action(action)
 
+    def remove_action(self, action_id, action_name):
+        """
+        Remove an existing action.
+
+        action_id -- ID of the action
+        action_name -- name of the action
+        """
+        if action_name not in self.actions:
+            return
+
+        self.cancel_action(action_id, action_name)
+
     def perform_action(self, action):
         """
         Do anything necessary to perform the given action.
 
         action -- the action to perform
+        """
+        pass
+
+    def cancel_action(self, action_id, action_name):
+        """
+        Do anything necessary to cancel the given action.
+
+        action_id -- ID of the action
+        action_name -- name of the action
         """
         pass
 
