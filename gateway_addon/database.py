@@ -80,3 +80,32 @@ class Database:
             return None
 
         return data['moziot']['config']
+
+    def save_config(self, config):
+        """Save the package's config in the database."""
+        if not self.conn:
+            return False
+
+        key = 'addons.{}'.format(self.package_name)
+        c = self.conn.cursor()
+        c.execute('SELECT value FROM settings WHERE key = ?', (key,))
+        data = c.fetchone()
+        c.close()
+
+        if not data:
+            return False
+
+        data = json.loads(data[0])
+
+        if 'moziot' not in data:
+            data['moziot'] = {}
+
+        data['moziot']['config'] = config
+
+        c = self.conn.cursor()
+        c.execute('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)',
+                  (key, json.dumps(data)))
+        self.conn.commit()
+        c.close()
+
+        return True
