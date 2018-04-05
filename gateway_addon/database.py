@@ -19,11 +19,11 @@ _DB_PATHS = [
 ]
 
 if 'MOZIOT_HOME' in os.environ:
-    _DB_PATHS.append(
-        os.path.join(os.environ['MOZIOT_HOME'], 'config', 'db.sqlite3'))
+    _DB_PATHS.insert(
+        0, os.path.join(os.environ['MOZIOT_HOME'], 'config', 'db.sqlite3'))
 
 if 'MOZIOT_DATABASE' in os.environ:
-    _DB_PATHS.append(os.environ['MOZIOT_DATABASE'])
+    _DB_PATHS.insert(0, os.environ['MOZIOT_DATABASE'])
 
 
 class Database:
