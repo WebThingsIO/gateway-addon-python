@@ -72,12 +72,12 @@ class Database:
         c.close()
 
         if not data:
-            return None
+            return {}
 
         data = json.loads(data[0])
 
         if 'moziot' not in data or 'config' not in data['moziot']:
-            return None
+            return {}
 
         return data['moziot']['config']
 
