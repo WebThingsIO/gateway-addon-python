@@ -4,6 +4,7 @@ from nnpy.errors import NNError
 import functools
 import json
 import threading
+import time
 
 from .ipc import IpcClient
 
@@ -173,7 +174,13 @@ class AddonManagerProxy:
 
             if msg_type == 'unloadPlugin':
                 self.send('pluginUnloaded', {})
-                self.close()
+
+                def close_fn(proxy):
+                    # Give the message above time to be sent and received.
+                    time.sleep(.5)
+                    proxy.close()
+
+                self.make_thread(close_fn, args=(self,))
                 break
 
             if 'data' not in msg or 'adapterId' not in msg['data']:
