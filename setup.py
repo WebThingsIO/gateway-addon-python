@@ -21,5 +21,5 @@ setup(
     author_email='mrstegeman@gmail.com',
     keywords='mozilla iot gateway addon add-on',
     packages=find_packages(exclude=['contrib', 'docs', 'tests']),
-    install_requires=['nnpy'],
+    install_requires=['jsonschema', 'nnpy'],
 )
