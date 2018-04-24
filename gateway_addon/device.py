@@ -1,5 +1,8 @@
 """High-level Device base class implementation."""
 
+from jsonschema import validate
+from jsonschema.exceptions import ValidationError
+
 from .action import Action
 
 
@@ -172,6 +175,14 @@ class Device:
         """
         if action_name not in self.actions:
             return
+
+        # Validate action input, if present.
+        metadata = self.actions[action_name]
+        if 'input' in metadata:
+            try:
+                validate(action_input, metadata['input'])
+            except ValidationError:
+                return
 
         action = Action(action_id, self, action_name, action_input)
         self.perform_action(action)
