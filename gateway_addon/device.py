@@ -17,7 +17,7 @@ class Device:
         _id -- the device's individual ID
         """
         self.adapter = adapter
-        self.id = _id
+        self.id = str(_id)
         self.type = 'thing'
         self.name = ''
         self.description = ''
