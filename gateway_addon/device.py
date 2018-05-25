@@ -24,6 +24,7 @@ class Device:
         self.properties = {}
         self.actions = {}
         self.events = {}
+        self.ui_href = None
 
     def as_dict(self):
         """
@@ -40,6 +41,7 @@ class Device:
             'properties': properties,
             'actions': self.actions,
             'events': self.events,
+            'uiHref': self.ui_href,
         }
 
     def as_thing(self):
@@ -53,6 +55,7 @@ class Device:
             'name': self.name,
             'type': self.type,
             'properties': self.get_property_descriptions(),
+            'uiHref': self.ui_href,
         }
 
         if self.description:
