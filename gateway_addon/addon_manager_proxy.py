@@ -7,6 +7,7 @@ import threading
 import time
 
 from .ipc import IpcClient
+from .errors import ActionError, PropertyError, SetPinError
 
 print = functools.partial(print, flush=True)
 
@@ -234,41 +235,100 @@ class AddonManagerProxy:
             if msg_type == 'setProperty':
                 def set_prop_fn(proxy, adapter):
                     dev = adapter.get_device(device_id)
-                    if dev:
-                        prop = dev.find_property(msg['data']['propertyName'])
-                        if prop:
-                            prop.set_value(msg['data']['propertyValue'])
-                            if prop.fire_and_forget:
-                                self.send_property_changed_notification(prop)
+                    if not dev:
+                        return
+
+                    prop = dev.find_property(msg['data']['propertyName'])
+                    if not prop:
+                        return
+
+                    try:
+                        prop.set_value(msg['data']['propertyValue'])
+                        if prop.fire_and_forget:
+                            proxy.send_property_changed_notification(prop)
+                    except PropertyError:
+                        proxy.send_property_changed_notification(prop)
 
                 self.make_thread(set_prop_fn, args=(self, adapter))
                 continue
 
             if msg_type == 'requestAction':
                 def request_action_fn(proxy, adapter):
-                    dev = adapter.get_device(device_id)
+                    action_id = msg['data']['actionId']
+                    action_name = msg['data']['actionName']
 
-                    action_input = None
-                    if 'input' in msg['data']:
-                        action_input = msg['data']['input']
+                    try:
+                        dev = adapter.get_device(device_id)
 
-                    if dev:
-                        dev.request_action(msg['data']['actionId'],
-                                           msg['data']['actionName'],
-                                           action_input)
+                        if dev:
+                            action_input = None
+                            if 'input' in msg['data']:
+                                action_input = msg['data']['input']
+
+                            dev.request_action(action_id,
+                                               action_name,
+                                               action_input)
+
+                        proxy.send('requestActionResolved', {
+                            'actionName': action_name,
+                            'actionId': action_id,
+                        })
+                    except ActionError:
+                        proxy.send('requestActionRejected', {
+                            'actionName': action_name,
+                            'actionId': action_id,
+                        })
 
                 self.make_thread(request_action_fn, args=(self, adapter))
                 continue
 
             if msg_type == 'removeAction':
                 def remove_action_fn(proxy, adapter):
-                    dev = adapter.get_device(device_id)
+                    action_id = msg['data']['actionId']
+                    action_name = msg['data']['actionName']
+                    message_id = msg['data']['messageId']
 
-                    if dev:
-                        dev.remove_action(msg['data']['actionId'],
-                                          msg['data']['actionName'])
+                    try:
+                        dev = adapter.get_device(device_id)
+
+                        if dev:
+                            dev.remove_action(action_id, action_name)
+
+                        proxy.send('removeActionResolved', {
+                            'actionName': action_name,
+                            'actionId': action_id,
+                            'messageId': message_id,
+                        })
+                    except ActionError:
+                        proxy.send('removeActionRejected', {
+                            'actionName': action_name,
+                            'actionId': action_id,
+                            'messageId': message_id,
+                        })
 
                 self.make_thread(remove_action_fn, args=(self, adapter))
+                continue
+
+            if msg_type == 'setPin':
+                def set_pin_fn(proxy, adapter):
+                    message_id = msg['data']['messageId']
+
+                    try:
+                        adapter.set_pin(device_id, msg['data']['pin'])
+
+                        dev = adapter.get_device(device_id)
+                        proxy.send('setPinResolved', {
+                            'device': dev.as_dict(),
+                            'messageId': message_id,
+                            'adapterId': adapter.id,
+                        })
+                    except SetPinError:
+                        proxy.send('setPinRejected', {
+                            'deviceId': device_id,
+                            'messageId': message_id,
+                        })
+
+                self.make_thread(set_pin_fn, args=(self, adapter))
                 continue
 
     @staticmethod

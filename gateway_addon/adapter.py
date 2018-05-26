@@ -3,6 +3,7 @@
 import functools
 
 from .addon_manager_proxy import AddonManagerProxy
+from .errors import SetPinError
 
 
 print = functools.partial(print, flush=True)
@@ -168,3 +169,17 @@ class Adapter:
     def unload(self):
         """Perform any necessary cleanup before adapter is shut down."""
         print('Adapter:', self.name, 'unloaded')
+
+    def set_pin(self, device_id, pin):
+        """
+        Set the PIN for the given device.
+
+        device_id -- ID of device
+        pin -- PIN to set
+        """
+        device = self.get_device(device_id)
+        if device:
+            print('Adapter:', self.name, 'id', self.id,
+                  'set_pin(' + device.id + ', ' + pin + ')')
+        else:
+            raise SetPinError('Device not found')
