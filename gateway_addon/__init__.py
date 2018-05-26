@@ -6,6 +6,7 @@ from .adapter import Adapter
 from .addon_manager_proxy import AddonManagerProxy
 from .database import Database
 from .device import Device
+from .errors import PropertyException
 from .event import Event
 from .ipc import IpcClient
 from .property import Property
