@@ -7,6 +7,7 @@ import threading
 import time
 
 from .ipc import IpcClient
+from .errors import PropertyError
 
 print = functools.partial(print, flush=True)
 
@@ -234,12 +235,19 @@ class AddonManagerProxy:
             if msg_type == 'setProperty':
                 def set_prop_fn(proxy, adapter):
                     dev = adapter.get_device(device_id)
-                    if dev:
-                        prop = dev.find_property(msg['data']['propertyName'])
-                        if prop:
-                            prop.set_value(msg['data']['propertyValue'])
-                            if prop.fire_and_forget:
-                                self.send_property_changed_notification(prop)
+                    if not dev:
+                        return
+
+                    prop = dev.find_property(msg['data']['propertyName'])
+                    if not prop:
+                        return
+
+                    try:
+                        prop.set_value(msg['data']['propertyValue'])
+                        if prop.fire_and_forget:
+                            self.send_property_changed_notification(prop)
+                    except PropertyError:
+                        self.send_property_changed_notification(prop)
 
                 self.make_thread(set_prop_fn, args=(self, adapter))
                 continue
