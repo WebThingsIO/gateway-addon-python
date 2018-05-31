@@ -25,6 +25,8 @@ class Device:
         self.actions = {}
         self.events = {}
         self.ui_href = None
+        self.pin_required = False
+        self.pin_pattern = None
 
     def as_dict(self):
         """
@@ -42,6 +44,10 @@ class Device:
             'actions': self.actions,
             'events': self.events,
             'uiHref': self.ui_href,
+            'pin': {
+                'required': self.pin_required,
+                'pattern': self.pin_pattern,
+            },
         }
 
     def as_thing(self):
@@ -56,6 +62,10 @@ class Device:
             'type': self.type,
             'properties': self.get_property_descriptions(),
             'uiHref': self.ui_href,
+            'pin': {
+                'required': self.pin_required,
+                'pattern': self.pin_regex,
+            },
         }
 
         if self.description:
