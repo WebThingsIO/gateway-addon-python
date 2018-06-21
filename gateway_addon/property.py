@@ -29,7 +29,15 @@ class Property:
         if 'max' in description:
             self.description['maximum'] = description['max']
 
-        fields = ['type', 'unit', 'description', 'minimum', 'maximum']
+        fields = [
+            'label',
+            'type',
+            '@type',
+            'unit',
+            'description',
+            'minimum',
+            'maximum',
+        ]
         for field in fields:
             if field in description:
                 self.description[field] = description[field]

@@ -19,6 +19,8 @@ class Device:
         self.adapter = adapter
         self.id = str(_id)
         self.type = 'thing'
+        self._context = 'https://iot.mozilla.org/schemas'
+        self._type = []
         self.name = ''
         self.description = ''
         self.properties = {}
@@ -39,6 +41,8 @@ class Device:
             'id': self.id,
             'name': self.name,
             'type': self.type,
+            '@context': self._context,
+            '@type': self._type,
             'description': self.description,
             'properties': properties,
             'actions': self.actions,
@@ -60,6 +64,8 @@ class Device:
             'id': self.id,
             'name': self.name,
             'type': self.type,
+            '@context': self._context,
+            '@type': self._type,
             'properties': self.get_property_descriptions(),
             'uiHref': self.ui_href,
             'pin': {
