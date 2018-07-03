@@ -37,6 +37,7 @@ class Property:
             'description',
             'minimum',
             'maximum',
+            'enum',
         ]
         for field in fields:
             if field in description:
