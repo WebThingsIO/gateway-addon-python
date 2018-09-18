@@ -46,6 +46,14 @@ class AddonManagerProxy:
         except NNError:
             pass
 
+    def send_error(self, message):
+        """
+        Send an error notification.
+
+        message -- error message
+        """
+        self.send('pluginError', {'message': message})
+
     def add_adapter(self, adapter):
         """
         Send a notification that an adapter has been added.

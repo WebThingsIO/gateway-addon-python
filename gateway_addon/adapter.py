@@ -44,6 +44,14 @@ class Adapter:
         """Close the manager proxy."""
         self.manager_proxy.close()
 
+    def send_error(self, message):
+        """
+        Send an error notification.
+
+        message -- error message
+        """
+        self.manager_proxy.send_error(message)
+
     def dump(self):
         """Dump the state of the adapter to the log."""
         print('Adapter:', self.name, '- dump() not implemented')
