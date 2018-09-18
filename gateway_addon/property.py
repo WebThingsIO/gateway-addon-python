@@ -1,5 +1,7 @@
 """High-level Property base class implementation."""
 
+from .errors import PropertyError
+
 
 class Property:
     """A Property represents an individual state value of a device."""
@@ -38,6 +40,7 @@ class Property:
             'minimum',
             'maximum',
             'enum',
+            'readOnly',
         ]
         for field in fields:
             if field in description:
@@ -99,4 +102,7 @@ class Property:
 
         value -- the value to set
         """
+        if 'readOnly' in self.description and self.description['readOnly']:
+            raise PropertyError('Read-only property')
+
         self.set_cached_value(value)
