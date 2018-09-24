@@ -105,4 +105,20 @@ class Property:
         if 'readOnly' in self.description and self.description['readOnly']:
             raise PropertyError('Read-only property')
 
+        if 'minimum' in self.description and \
+                value < self.description['minimum']:
+            raise PropertyError('Value less than minimum: {}'
+                                .format(self.description['minimum']))
+
+        if 'maximum' in self.description and \
+                value > self.description['maximum']:
+            raise PropertyError('Value greater than maximum: {}'
+                                .format(self.description['maximum']))
+
+        if 'enum' in self.description and \
+                len(self.description['enum']) > 0 and \
+                value not in self.description['enum']:
+            raise PropertyError('Invalid enum value')
+
         self.set_cached_value(value)
+        self.device.notify_property_changed(self)
