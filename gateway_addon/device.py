@@ -171,6 +171,14 @@ class Device:
         """
         self.adapter.manager_proxy.send_event_notification(event)
 
+    def connected_notify(self, connected):
+        """
+        Notify the AddonManager in the Gateway of the device's connectivity.
+
+        connected -- whether or not the device is connected
+        """
+        self.adapter.manager_proxy.send_connected_notification(self, connected)
+
     def set_property(self, property_name, value):
         """
         Set a property value.
