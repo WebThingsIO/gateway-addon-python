@@ -133,6 +133,19 @@ class AddonManagerProxy:
             'event': event.as_dict(),
         })
 
+    def send_connected_notification(self, device, connected):
+        """
+        Send a notification that a device's connectivity state changed.
+
+        device -- the device object
+        connected -- the new connectivity state
+        """
+        self.send('connected', {
+            'adapterId': device.adapter.id,
+            'deviceId': device.id,
+            'connected': connected,
+        })
+
     def send(self, msg_type, data):
         """
         Send a message through the IPC socket.
