@@ -41,6 +41,7 @@ class Property:
             'maximum',
             'enum',
             'readOnly',
+            'multipleOf',
         ]
         for field in fields:
             if field in description:
@@ -114,6 +115,11 @@ class Property:
                 value > self.description['maximum']:
             raise PropertyError('Value greater than maximum: {}'
                                 .format(self.description['maximum']))
+
+        if 'multipleOf' in self.description and \
+                value % self.description['multipleOf'] != 0:
+            raise PropertyError('Value is not a multiple of: {}'
+                                .format(self.description['multipleOf']))
 
         if 'enum' in self.description and \
                 len(self.description['enum']) > 0 and \
