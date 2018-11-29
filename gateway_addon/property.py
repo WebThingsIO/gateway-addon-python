@@ -42,6 +42,7 @@ class Property:
             'enum',
             'readOnly',
             'multipleOf',
+            'links',
         ]
         for field in fields:
             if field in description:
