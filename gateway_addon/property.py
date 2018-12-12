@@ -31,8 +31,12 @@ class Property:
         if 'max' in description:
             self.description['maximum'] = description['max']
 
+        # Check 'label' for backwards compatibility
+        if 'label' in description:
+            self.description['title'] = description['label']
+
         fields = [
-            'label',
+            'title',
             'type',
             '@type',
             'unit',
