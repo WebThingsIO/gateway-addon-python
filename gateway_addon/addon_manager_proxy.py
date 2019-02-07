@@ -7,7 +7,8 @@ import threading
 import time
 
 from .ipc import IpcClient
-from .errors import ActionError, PropertyError, SetPinError
+from .errors import (ActionError, PropertyError, SetCredentialsError,
+                     SetPinError)
 
 print = functools.partial(print, flush=True)
 
@@ -97,23 +98,49 @@ class AddonManagerProxy:
             'id': device.id,
         })
 
-    def send_pairing_prompt(self, adapter, prompt, device=None):
+    def send_pairing_prompt(self, adapter, prompt, url=None, device=None):
         """
         Send a prompt to the UI notifying the user to take some action.
 
         adapter -- The adapter sending the prompt
         prompt -- The prompt to send
-        device -- Device the prompt is associated with (optional)
+        url -- URL to site with further explanation or troubleshooting info
+        device -- Device the prompt is associated with
         """
         data = {
             'adapterId': adapter.id,
             'prompt': prompt,
         }
 
+        if url is not None:
+            data['url'] = url
+
         if device is not None:
             data['deviceId'] = device.id
 
         self.send('pairingPrompt', data)
+
+    def send_unpairing_prompt(self, adapter, prompt, url=None, device=None):
+        """
+        Send a prompt to the UI notifying the user to take some action.
+
+        adapter -- The adapter sending the prompt
+        prompt -- The prompt to send
+        url -- URL to site with further explanation or troubleshooting info
+        device -- Device the prompt is associated with
+        """
+        data = {
+            'adapterId': adapter.id,
+            'prompt': prompt,
+        }
+
+        if url is not None:
+            data['url'] = url
+
+        if device is not None:
+            data['deviceId'] = device.id
+
+        self.send('unpairingPrompt', data)
 
     def send_property_changed_notification(self, prop):
         """
@@ -368,6 +395,30 @@ class AddonManagerProxy:
                         })
 
                 self.make_thread(set_pin_fn, args=(self, adapter))
+                continue
+
+            if msg_type == 'setCredentials':
+                def set_credentials_fn(proxy, adapter):
+                    message_id = msg['data']['messageId']
+
+                    try:
+                        adapter.set_credentials(device_id,
+                                                msg['data']['username'],
+                                                msg['data']['password'])
+
+                        dev = adapter.get_device(device_id)
+                        proxy.send('setCredentialsResolved', {
+                            'device': dev.as_dict(),
+                            'messageId': message_id,
+                            'adapterId': adapter.id,
+                        })
+                    except SetCredentialsError:
+                        proxy.send('setCredentialsRejected', {
+                            'deviceId': device_id,
+                            'messageId': message_id,
+                        })
+
+                self.make_thread(set_credentials_fn, args=(self, adapter))
                 continue
 
     @staticmethod
