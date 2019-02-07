@@ -146,13 +146,14 @@ class Adapter:
         """
         print('Adapter:', self.name, 'id', self.id, 'pairing started')
 
-    def send_pairing_prompt(self, prompt):
+    def send_pairing_prompt(self, prompt, device=None):
         """
         Send a prompt to the UI notifying the user to take some action.
 
         prompt -- The prompt to send
+        device -- Device the prompt is associated with (optional)
         """
-        self.manager_proxy.send_pairing_prompt(self, prompt)
+        self.manager_proxy.send_pairing_prompt(self, prompt, device)
 
     def cancel_pairing(self):
         """Cancel the pairing process."""

@@ -97,17 +97,23 @@ class AddonManagerProxy:
             'id': device.id,
         })
 
-    def send_pairing_prompt(self, adapter, prompt):
+    def send_pairing_prompt(self, adapter, prompt, device=None):
         """
         Send a prompt to the UI notifying the user to take some action.
 
         adapter -- The adapter sending the prompt
         prompt -- The prompt to send
+        device -- Device the prompt is associated with (optional)
         """
-        self.send('pairingPrompt', {
+        data = {
             'adapterId': adapter.id,
             'prompt': prompt,
-        })
+        }
+
+        if device is not None:
+            data['deviceId'] = device.id
+
+        self.send('pairingPrompt', data)
 
     def send_property_changed_notification(self, prop):
         """
