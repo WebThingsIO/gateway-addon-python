@@ -17,3 +17,9 @@ class SetPinError(Exception):
     """Exception to indicate an issue with setting a PIN."""
 
     pass
+
+
+class SetCredentialsError(Exception):
+    """Exception to indicate an issue with setting the credentials."""
+
+    pass

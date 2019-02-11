@@ -29,6 +29,7 @@ class Device:
         self.base_href = None
         self.pin_required = False
         self.pin_pattern = None
+        self.credentials_required = False
 
     def as_dict(self):
         """
@@ -52,6 +53,7 @@ class Device:
                 'required': self.pin_required,
                 'pattern': self.pin_pattern,
             },
+            'credentialsRequired': self.credentials_required,
         }
 
     def as_thing(self):
@@ -72,6 +74,7 @@ class Device:
                 'required': self.pin_required,
                 'pattern': self.pin_regex,
             },
+            'credentialsRequired': self.credentials_required,
         }
 
         if self.description:

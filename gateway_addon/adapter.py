@@ -3,7 +3,7 @@
 import functools
 
 from .addon_manager_proxy import AddonManagerProxy
-from .errors import SetPinError
+from .errors import SetCredentialsError, SetPinError
 
 
 print = functools.partial(print, flush=True)
@@ -146,6 +146,26 @@ class Adapter:
         """
         print('Adapter:', self.name, 'id', self.id, 'pairing started')
 
+    def send_pairing_prompt(self, prompt, url=None, device=None):
+        """
+        Send a prompt to the UI notifying the user to take some action.
+
+        prompt -- The prompt to send
+        url -- URL to site with further explanation or troubleshooting info
+        device -- Device the prompt is associated with
+        """
+        self.manager_proxy.send_pairing_prompt(self, prompt, url, device)
+
+    def send_unpairing_prompt(self, prompt, url=None, device=None):
+        """
+        Send a prompt to the UI notifying the user to take some action.
+
+        prompt -- The prompt to send
+        url -- URL to site with further explanation or troubleshooting info
+        device -- Device the prompt is associated with
+        """
+        self.manager_proxy.send_unpairing_prompt(self, prompt, url, device)
+
     def cancel_pairing(self):
         """Cancel the pairing process."""
         print('Adapter:', self.name, 'id', self.id, 'pairing cancelled')
@@ -191,3 +211,19 @@ class Adapter:
                   'set_pin(' + device.id + ', ' + pin + ')')
         else:
             raise SetPinError('Device not found')
+
+    def set_credentials(self, device_id, username, password):
+        """
+        Set the username and password for the given device.
+
+        device_id -- ID of device
+        username -- Username to set
+        password -- Password to set
+        """
+        device = self.get_device(device_id)
+        if device:
+            print('Adapter:', self.name, 'id', self.id,
+                  'set_credentials(' + device.id + ', ' + username + ', ' +
+                  password + ')')
+        else:
+            raise SetCredentialsError('Device not found')
