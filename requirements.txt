@@ -1,2 +1,2 @@
-jsonschema
-nnpy
+jsonschema==2.6.0
+nnpy==1.4.2
