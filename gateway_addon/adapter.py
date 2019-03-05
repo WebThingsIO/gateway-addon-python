@@ -1,5 +1,6 @@
 """High-level Adapter base class implementation."""
 
+from __future__ import print_function
 import functools
 
 from .addon_manager_proxy import AddonManagerProxy

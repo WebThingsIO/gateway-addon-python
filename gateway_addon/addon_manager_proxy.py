@@ -1,5 +1,6 @@
 """Proxy for sending messages between the Gateway and an add-on."""
 
+from __future__ import print_function
 from nnpy.errors import NNError
 import functools
 import json

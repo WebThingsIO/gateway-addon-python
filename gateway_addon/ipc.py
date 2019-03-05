@@ -1,5 +1,6 @@
 """IPC client to communicate with the Gateway."""
 
+from __future__ import print_function
 from nnpy.errors import NNError
 import functools
 import json
