@@ -78,6 +78,26 @@ class Property:
         """Return whether or not this property is visible."""
         return self.visible
 
+    def set_cached_value_and_notify(self, value):
+        """
+        Set the cached value of the property and notify the device if changed.
+
+        value -- the value to set
+
+        Returns True if the value has changed, False otherwise.
+        """
+        old_value = self.value
+        self.set_cached_value(value)
+
+        # set_cached_value may change the value, therefore we have to check
+        # self.value after the call to set_cached_value
+        has_changed = old_value != self.value
+
+        if has_changed:
+            self.device.notify_property_changed(self)
+
+        return has_changed
+
     def set_cached_value(self, value):
         """
         Set the cached value of the property, making adjustments as necessary.
@@ -131,5 +151,4 @@ class Property:
                 value not in self.description['enum']:
             raise PropertyError('Invalid enum value')
 
-        self.set_cached_value(value)
-        self.device.notify_property_changed(self)
+        self.set_cached_value_and_notify(value)
