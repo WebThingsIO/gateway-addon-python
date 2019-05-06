@@ -31,7 +31,7 @@ class Adapter:
 
         # We assume that the adapter is ready right away. If, for some reason,
         # a particular adapter needs some time, then it should set ready to
-        # False in it's constructor.
+        # False in its constructor.
         self.ready = True
 
         self.manager_proxy = AddonManagerProxy(self.id, verbose=verbose)

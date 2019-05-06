@@ -8,8 +8,8 @@ import threading
 import time
 
 from .ipc import IpcClient
-from .errors import (ActionError, PropertyError, SetCredentialsError,
-                     SetPinError)
+from .errors import (ActionError, NotifyError, PropertyError,
+                     SetCredentialsError, SetPinError)
 
 print = functools.partial(print, flush=True)
 
@@ -30,6 +30,7 @@ class AddonManagerProxy:
         verbose -- whether or not to enable verbose logging
         """
         self.adapters = {}
+        self.notifiers = {}
         self.ipc_client = IpcClient(plugin_id, verbose=verbose)
         self.plugin_id = plugin_id
         self.verbose = verbose
@@ -72,6 +73,22 @@ class AddonManagerProxy:
             'packageName': adapter.package_name,
         })
 
+    def add_notifier(self, notifier):
+        """
+        Send a notification that a notifier has been added.
+
+        notifier -- the Notifier that was added
+        """
+        if self.verbose:
+            print('AddonManagerProxy: add_notifier:', notifier.id)
+
+        self.notifiers[notifier.id] = notifier
+        self.send('addNotifier', {
+            'notifierId': notifier.id,
+            'name': notifier.name,
+            'packageName': notifier.package_name,
+        })
+
     def handle_device_added(self, device):
         """
         Send a notification that a new device has been added.
@@ -97,6 +114,33 @@ class AddonManagerProxy:
         self.send('handleDeviceRemoved', {
             'adapterId': device.adapter.id,
             'id': device.id,
+        })
+
+    def handle_outlet_added(self, outlet):
+        """
+        Send a notification that a new outlet has been added.
+
+        outlet -- the Outlet that was added
+        """
+        if self.verbose:
+            print('AddonManagerProxy: handle_outlet_added:', outlet.id)
+
+        outlet_dict = outlet.as_dict()
+        outlet_dict['notifierId'] = outlet.notifier.id
+        self.send('handleOutletAdded', outlet_dict)
+
+    def handle_outlet_removed(self, outlet):
+        """
+        Send a notification that a managed outlet was removed.
+
+        outlet -- the Outlet that was removed
+        """
+        if self.verbose:
+            print('AddonManagerProxy: handle_outlet_removed:', outlet.id)
+
+        self.send('handleOutletRemoved', {
+            'notifierId': outlet.notifier.id,
+            'id': outlet.id,
         })
 
     def send_pairing_prompt(self, adapter, prompt, url=None, device=None):
@@ -251,7 +295,59 @@ class AddonManagerProxy:
                 self.make_thread(close_fn, args=(self,))
                 break
 
-            if 'data' not in msg or 'adapterId' not in msg['data']:
+            if 'data' not in msg:
+                print('AddonManagerProxy: data not present in message')
+                continue
+
+            if 'notifierId' in msg['data']:
+                notifier_id = msg['data']['notifierId']
+                if notifier_id not in self.notifiers:
+                    print('AddonManagerProxy: Unrecognized notifier, ignoring '
+                          'message.')
+                    continue
+
+                notifier = self.notifiers[notifier_id]
+
+                if msg_type == 'unloadNotifier':
+                    def unload_fn(proxy, notifier):
+                        notifier.unload()
+                        proxy.send('notifierUnloaded',
+                                   {'notifierId': notifier.id})
+
+                    self.make_thread(unload_fn, args=(self, notifier))
+                    del self.notifiers[notifier.id]
+                    continue
+
+                if msg_type == 'notify':
+                    def notify_fn(proxy, notifier):
+                        outlet_id = msg['data']['outletId']
+                        outlet = notifier.get_outlet(outlet_id)
+                        if outlet is None:
+                            print('AddonManagerProxy: No such outlet, '
+                                  'ignoring message.')
+                            return
+
+                        message_id = msg['data']['messageId']
+
+                        try:
+                            outlet.notify(msg['data']['title'],
+                                          msg['data']['message'],
+                                          msg['data']['level'])
+
+                            proxy.send('notifyResolved', {
+                                'messageId': message_id,
+                            })
+                        except NotifyError:
+                            proxy.send('notifyRejected', {
+                                'messageId': message_id,
+                            })
+
+                    self.make_thread(notify_fn, args=(self, notifier))
+                    continue
+
+                continue
+
+            if 'adapterId' not in msg['data']:
                 print('AddonManagerProxy: Adapter ID not present in message.')
                 continue
 

@@ -23,3 +23,9 @@ class SetCredentialsError(Exception):
     """Exception to indicate an issue with setting the credentials."""
 
     pass
+
+
+class NotifyError(Exception):
+    """Exception to indicate an issue with notifying the user."""
+
+    pass
