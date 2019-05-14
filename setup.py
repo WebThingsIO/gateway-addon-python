@@ -26,7 +26,7 @@ elif sys.version_info.major == 3:
 
 setup(
     name='gateway_addon',
-    version='0.8.0',
+    version='0.9.0',
     description='Bindings for Mozilla WebThings Gateway add-ons',
     long_description=long_description,
     url='https://github.com/mozilla-iot/gateway-addon-python',
