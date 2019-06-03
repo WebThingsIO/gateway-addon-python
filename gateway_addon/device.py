@@ -26,6 +26,7 @@ class Device:
         self.properties = {}
         self.actions = {}
         self.events = {}
+        self.links = []
         self.base_href = None
         self.pin_required = False
         self.pin_pattern = None
@@ -48,6 +49,7 @@ class Device:
             'properties': properties,
             'actions': self.actions,
             'events': self.events,
+            'links': self.links,
             'baseHref': self.base_href,
             'pin': {
                 'required': self.pin_required,
@@ -69,6 +71,7 @@ class Device:
             '@context': self._context,
             '@type': self._type,
             'properties': self.get_property_descriptions(),
+            'links': self.links,
             'baseHref': self.base_href,
             'pin': {
                 'required': self.pin_required,
