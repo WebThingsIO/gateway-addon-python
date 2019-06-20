@@ -21,7 +21,7 @@ class Device:
         self.type = 'thing'
         self._context = 'https://iot.mozilla.org/schemas'
         self._type = []
-        self.name = ''
+        self.title = ''
         self.description = ''
         self.properties = {}
         self.actions = {}
@@ -39,9 +39,13 @@ class Device:
         Returns the state as a dictionary.
         """
         properties = {k: v.as_dict() for k, v in self.properties.items()}
+
+        if hasattr(self, 'name') and not self.title:
+            self.title = self.name
+
         return {
             'id': self.id,
-            'name': self.name,
+            'title': self.title,
             'type': self.type,
             '@context': self._context,
             '@type': self._type,
@@ -64,9 +68,12 @@ class Device:
 
         Returns the state as a dictionary.
         """
+        if hasattr(self, 'name') and not self.title:
+            self.title = self.name
+
         thing = {
             'id': self.id,
-            'name': self.name,
+            'title': self.title,
             'type': self.type,
             '@context': self._context,
             '@type': self._type,
@@ -99,7 +106,19 @@ class Device:
 
         Returns the name as a string.
         """
-        return self.name
+        print('get_name() is deprecated. Please use get_title().')
+        return self.get_title()
+
+    def get_title(self):
+        """
+        Get the title of the device.
+
+        Returns the title as a string.
+        """
+        if hasattr(self, 'name') and not self.title:
+            self.title = self.name
+
+        return self.title
 
     def get_type(self):
         """
