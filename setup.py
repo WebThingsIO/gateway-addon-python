@@ -24,9 +24,11 @@ elif sys.version_info.major == 3:
     else:
         requirements.append('jsonschema>=3.0.0')
 
+from gateway_addon import __version__
+
 setup(
     name='gateway_addon',
-    version='0.9.0',
+    version=__version__,
     description='Bindings for Mozilla WebThings Gateway add-ons',
     long_description=long_description,
     url='https://github.com/mozilla-iot/gateway-addon-python',

@@ -14,4 +14,10 @@ from .notifier import Notifier
 from .outlet import Outlet
 from .property import Property
 
+__version__ = '0.9.0'
 API_VERSION = 2
+
+
+def get_version():
+    """Get the version of this package."""
+    return __version__
