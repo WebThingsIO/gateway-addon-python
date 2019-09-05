@@ -58,6 +58,7 @@ class IpcClient:
             self.plugin_socket = nnpy.Socket(nnpy.AF_SP, nnpy.PAIR)
             self.plugin_conn = self.plugin_socket.connect(
                 _IPC_BASE + resp['data']['ipcBaseAddr'])
+            self.user_profile = resp['data']['userProfile']
 
             if verbose:
                 print('IpcClient: Registered with PluginServer')

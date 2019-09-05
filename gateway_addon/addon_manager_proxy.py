@@ -32,6 +32,7 @@ class AddonManagerProxy:
         self.adapters = {}
         self.notifiers = {}
         self.ipc_client = IpcClient(plugin_id, verbose=verbose)
+        self.user_profile = self.ipc_client.user_profile
         self.plugin_id = plugin_id
         self.verbose = verbose
         self.running = True

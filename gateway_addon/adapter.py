@@ -37,6 +37,8 @@ class Adapter:
         self.manager_proxy = AddonManagerProxy(self.id, verbose=verbose)
         self.manager_proxy.add_adapter(self)
 
+        self.user_profile = self.manager_proxy.user_profile
+
     def proxy_running(self):
         """Return boolean indicating whether or not the proxy is running."""
         return self.manager_proxy.running
