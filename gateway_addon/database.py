@@ -65,7 +65,7 @@ class Database:
         if not self.conn:
             return None
 
-        key = 'addons.{}'.format(self.package_name)
+        key = 'addons.config.{}'.format(self.package_name)
         c = self.conn.cursor()
         c.execute('SELECT value FROM settings WHERE key = ?', (key,))
         data = c.fetchone()
@@ -74,37 +74,17 @@ class Database:
         if not data:
             return {}
 
-        data = json.loads(data[0])
-
-        if 'moziot' not in data or 'config' not in data['moziot']:
-            return {}
-
-        return data['moziot']['config']
+        return json.loads(data)
 
     def save_config(self, config):
         """Save the package's config in the database."""
         if not self.conn:
             return False
 
-        key = 'addons.{}'.format(self.package_name)
-        c = self.conn.cursor()
-        c.execute('SELECT value FROM settings WHERE key = ?', (key,))
-        data = c.fetchone()
-        c.close()
-
-        if not data:
-            return False
-
-        data = json.loads(data[0])
-
-        if 'moziot' not in data:
-            data['moziot'] = {}
-
-        data['moziot']['config'] = config
-
+        key = 'addons.config.{}'.format(self.package_name)
         c = self.conn.cursor()
         c.execute('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)',
-                  (key, json.dumps(data)))
+                  (key, json.dumps(config)))
         self.conn.commit()
         c.close()
 
