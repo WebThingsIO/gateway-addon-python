@@ -74,7 +74,7 @@ class Database:
         if not data:
             return {}
 
-        return json.loads(data)
+        return json.loads(data[0])
 
     def save_config(self, config):
         """Save the package's config in the database."""
