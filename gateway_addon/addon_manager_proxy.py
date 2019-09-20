@@ -2,18 +2,21 @@
 
 from __future__ import print_function
 from nnpy.errors import NNError
+from singleton_decorator import singleton
 import functools
 import json
 import threading
 import time
 
-from .ipc import IpcClient
-from .errors import (ActionError, NotifyError, PropertyError,
+from .api_handler_utils import APIRequest, APIResponse
+from .errors import (ActionError, APIHandlerError, NotifyError, PropertyError,
                      SetCredentialsError, SetPinError)
+from .ipc import IpcClient
 
 print = functools.partial(print, flush=True)
 
 
+@singleton
 class AddonManagerProxy:
     """
     Proxy for communicating with the Gateway's AddonManager.
@@ -31,6 +34,7 @@ class AddonManagerProxy:
         """
         self.adapters = {}
         self.notifiers = {}
+        self.api_handlers = {}
         self.ipc_client = IpcClient(plugin_id, verbose=verbose)
         self.user_profile = self.ipc_client.user_profile
         self.plugin_id = plugin_id
@@ -88,6 +92,20 @@ class AddonManagerProxy:
             'notifierId': notifier.id,
             'name': notifier.name,
             'packageName': notifier.package_name,
+        })
+
+    def add_api_handler(self, handler):
+        """
+        Send a notification that an API handler has been added.
+
+        handler -- the handler that was added
+        """
+        if self.verbose:
+            print('AddonManagerProxy: add_api_handler:', handler.package_name)
+
+        self.api_handlers[handler.package_name] = handler
+        self.send('addAPIHandler', {
+            'packageName': handler.package_name,
         })
 
     def handle_device_added(self, device):
@@ -298,6 +316,57 @@ class AddonManagerProxy:
 
             if 'data' not in msg:
                 print('AddonManagerProxy: data not present in message')
+                continue
+
+            if msg_type == 'unloadAPIHandler':
+                package_name = msg['data']['packageName']
+                if package_name not in self.api_handlers:
+                    print('AddonManager: Unrecognized handler, ignoring '
+                          'message.')
+                    continue
+
+                handler = self.api_handlers[package_name]
+
+                def unload_fn(proxy, handler):
+                    handler.unload()
+                    proxy.send('apiHandlerUnloaded',
+                               {'packageName': handler.package_name})
+
+                self.make_thread(unload_fn, args=(self, handler))
+                del self.api_handlers[handler.package_name]
+                continue
+
+            if msg_type == 'apiRequest':
+                package_name = msg['data']['packageName']
+                if package_name not in self.api_handlers:
+                    print('AddonManager: Unrecognized handler, ignoring '
+                          'message.')
+                    continue
+
+                handler = self.api_handlers[package_name]
+
+                def request_fn(proxy, handler):
+                    message_id = msg['data']['messageId']
+
+                    try:
+                        request = APIRequest(**msg['data']['request'])
+                        response = handler.handle_request(request)
+
+                        proxy.send('apiResponse', {
+                            'messageId': message_id,
+                            'response': response.to_json()
+                        })
+                    except APIHandlerError as e:
+                        proxy.send('apiResponse', {
+                            'messageId': message_id,
+                            'response': APIResponse(
+                                status=500,
+                                content_type='text/plain',
+                                content=str(e),
+                            ).to_json(),
+                        })
+
+                self.make_thread(request_fn, args=(self, handler))
                 continue
 
             if 'notifierId' in msg['data']:

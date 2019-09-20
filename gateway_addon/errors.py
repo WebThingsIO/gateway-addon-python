@@ -7,6 +7,12 @@ class ActionError(Exception):
     pass
 
 
+class APIHandlerError(Exception):
+    """Exception to indicate an issue with an API request handler."""
+
+    pass
+
+
 class PropertyError(Exception):
     """Exception to indicate an issue with a property."""
 

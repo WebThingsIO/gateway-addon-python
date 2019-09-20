@@ -14,19 +14,13 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 requirements = [
     'nnpy==1.4.2',
+    'jsonschema==3.0.2',
+    'singleton-decoratore==1.0.0',
 ]
-
-if sys.version_info.major == 2:
-    requirements.append('jsonschema==2.6.*')
-elif sys.version_info.major == 3:
-    if sys.version_info.minor < 5:
-        requirements.append('jsonschema==2.6.*')
-    else:
-        requirements.append('jsonschema>=3.0.0')
 
 setup(
     name='gateway_addon',
-    version='0.9.0',
+    version='0.10.0',
     description='Bindings for Mozilla WebThings Gateway add-ons',
     long_description=long_description,
     url='https://github.com/mozilla-iot/gateway-addon-python',
