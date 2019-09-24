@@ -32,7 +32,8 @@ class Notifier:
         # False in its constructor.
         self.ready = True
 
-        self.manager_proxy = AddonManagerProxy(self.id, verbose=verbose)
+        self.manager_proxy = \
+            AddonManagerProxy(self.package_name, verbose=verbose)
         self.manager_proxy.add_notifier(self)
 
         self.user_profile = self.manager_proxy.user_profile
