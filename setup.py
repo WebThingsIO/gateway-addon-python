@@ -15,7 +15,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 requirements = [
     'nnpy==1.4.2',
     'jsonschema==3.0.2',
-    'singleton-decoratore==1.0.0',
+    'singleton-decorator==1.0.0',
 ]
 
 setup(
