@@ -118,9 +118,11 @@ class AddonManagerProxy:
         if self.verbose:
             print('AddonManagerProxy: handle_device_added:', device.id)
 
-        device_dict = device.as_dict()
-        device_dict['adapterId'] = device.adapter.id
-        self.send(MessageType.DEVICE_ADDED_NOTIFICATION, device_dict)
+        data = {
+            'adapterId': device.adapter.id,
+            'device': device.as_dict(),
+        }
+        self.send(MessageType.DEVICE_ADDED_NOTIFICATION, data)
 
     def handle_device_removed(self, device):
         """
@@ -160,7 +162,7 @@ class AddonManagerProxy:
 
         self.send(MessageType.OUTLET_REMOVED_NOTIFICATION, {
             'notifierId': outlet.notifier.id,
-            'id': outlet.id,
+            'outletId': outlet.id,
         })
 
     def send_pairing_prompt(self, adapter, prompt, url=None, device=None):
@@ -354,11 +356,13 @@ class AddonManagerProxy:
                         response = handler.handle_request(request)
 
                         proxy.send(MessageType.API_HANDLER_API_RESPONSE, {
+                            'packageName': package_name,
                             'messageId': message_id,
                             'response': response.to_json()
                         })
                     except APIHandlerError as e:
                         proxy.send(MessageType.API_HANDLER_API_RESPONSE, {
+                            'packageName': package_name,
                             'messageId': message_id,
                             'response': APIResponse(
                                 status=500,
@@ -406,11 +410,15 @@ class AddonManagerProxy:
                                           msg['data']['level'])
 
                             proxy.send(MessageType.OUTLET_NOTIFY_RESPONSE, {
+                                'notifierId': notifier_id,
+                                'outletId': outlet_id,
                                 'messageId': message_id,
                                 'success': True,
                             })
                         except NotifyError:
                             proxy.send(MessageType.OUTLET_NOTIFY_RESPONSE, {
+                                'notifierId': notifier_id,
+                                'outletId': outlet_id,
                                 'messageId': message_id,
                                 'success': False,
                             })
@@ -508,6 +516,8 @@ class AddonManagerProxy:
                         proxy.send(
                             MessageType.DEVICE_REQUEST_ACTION_RESPONSE,
                             {
+                                'adapterId': adapter_id,
+                                'deviceId': device_id,
                                 'actionName': action_name,
                                 'actionId': action_id,
                                 'success': True,
@@ -517,6 +527,8 @@ class AddonManagerProxy:
                         proxy.send(
                             MessageType.DEVICE_REQUEST_ACTION_RESPONSE,
                             {
+                                'adapterId': adapter_id,
+                                'deviceId': device_id,
                                 'actionName': action_name,
                                 'actionId': action_id,
                                 'success': False,
@@ -539,16 +551,20 @@ class AddonManagerProxy:
                             dev.remove_action(action_id, action_name)
 
                         proxy.send(MessageType.DEVICE_REMOVE_ACTION_RESPONSE, {
+                            'adapterId': adapter_id,
                             'actionName': action_name,
                             'actionId': action_id,
                             'messageId': message_id,
+                            'deviceId': device_id,
                             'success': True,
                         })
                     except ActionError:
                         proxy.send(MessageType.DEVICE_REMOVE_ACTION_RESPONSE, {
+                            'adapterId': adapter_id,
                             'actionName': action_name,
                             'actionId': action_id,
                             'messageId': message_id,
+                            'deviceId': device_id,
                             'success': False,
                         })
 
@@ -573,6 +589,7 @@ class AddonManagerProxy:
                         proxy.send(MessageType.DEVICE_SET_PIN_RESPONSE, {
                             'deviceId': device_id,
                             'messageId': message_id,
+                            'adapterId': adapter.id,
                             'success': False,
                         })
 
@@ -604,6 +621,7 @@ class AddonManagerProxy:
                             {
                                 'deviceId': device_id,
                                 'messageId': message_id,
+                                'adapterId': adapter.id,
                                 'success': False,
                             }
                         )
