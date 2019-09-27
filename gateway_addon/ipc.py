@@ -6,6 +6,8 @@ import functools
 import json
 import nnpy
 
+from .constants import MessageType
+
 
 _IPC_BASE = 'ipc:///tmp/'
 
@@ -31,7 +33,7 @@ class IpcClient:
 
         try:
             self.manager_socket.send(json.dumps({
-                'messageType': 'registerPlugin',
+                'messageType': MessageType.PLUGIN_REGISTER_REQUEST,
                 'data': {
                     'pluginId': plugin_id,
                 }
@@ -52,7 +54,7 @@ class IpcClient:
         try:
             resp = json.loads(resp.decode('utf-8'))
             if not resp or 'messageType' not in resp or \
-                    resp['messageType'] != 'registerPluginReply':
+                    resp['messageType'] != MessageType.PLUGIN_REGISTER_RESPONSE:  # noqa
                 raise ValueError()
 
             self.plugin_socket = nnpy.Socket(nnpy.AF_SP, nnpy.PAIR)
