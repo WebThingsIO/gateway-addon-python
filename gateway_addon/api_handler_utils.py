@@ -8,10 +8,10 @@ class APIRequest:
 
     def __init__(self, **kwargs):
         """Initialize the object."""
-        self.method = kwargs.get('method', None)
-        self.path = kwargs.get('path', None)
-        self.query = kwargs.get('query', None)
-        self.body = kwargs.get('body', None)
+        self.method = kwargs.get('method', '')
+        self.path = kwargs.get('path', '')
+        self.query = kwargs.get('query', {})
+        self.body = kwargs.get('body', {})
 
     def __str__(self):
         """Format this object as a string."""
@@ -31,6 +31,8 @@ class APIResponse:
         self.status = kwargs.get('status', None)
         if self.status is None:
             self.status = 500
+            self.content_type = None
+            self.content = None
             return
 
         self.content_type = kwargs.get('content_type', None)
