@@ -5,6 +5,7 @@ from nnpy.errors import NNError
 from singleton_decorator import singleton
 import functools
 import json
+import jsonschema
 import threading
 import time
 
@@ -147,9 +148,11 @@ class AddonManagerProxy:
         if self.verbose:
             print('AddonManagerProxy: handle_outlet_added:', outlet.id)
 
-        outlet_dict = outlet.as_dict()
-        outlet_dict['notifierId'] = outlet.notifier.id
-        self.send(MessageType.OUTLET_ADDED_NOTIFICATION, outlet_dict)
+        data = {
+            'notifierId': outlet.adapter.id,
+            'outlet': outlet.as_dict(),
+        }
+        self.send(MessageType.OUTLET_ADDED_NOTIFICATION, data)
 
     def handle_outlet_removed(self, outlet):
         """
@@ -300,9 +303,10 @@ class AddonManagerProxy:
                 print('AddonManagerProxy: Error parsing message as JSON')
                 continue
 
-            if 'messageType' not in msg:
-                print('AddonManagerProxy: Invalid message')
-                continue
+            try:
+                self.ipc_client.validator.validate({'message': msg})
+            except jsonschema.exceptions.ValidationError:
+                print('Invalid message received:', msg)
 
             msg_type = msg['messageType']
 

@@ -27,5 +27,6 @@ setup(
     author='Mozilla IoT',
     keywords='mozilla webthings gateway addon add-on',
     packages=find_packages(exclude=['contrib', 'docs', 'tests']),
+    package_data={'': ['schema/schema.json', 'schema/**/*.json']},
     install_requires=requirements,
 )
