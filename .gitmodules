@@ -1,0 +1,3 @@
+[submodule "schema"]
+	path = gateway_addon/schema
+	url = https://github.com/mozilla-iot/gateway-addon-ipc-schema

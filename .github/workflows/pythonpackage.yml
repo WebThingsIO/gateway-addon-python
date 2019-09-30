@@ -28,5 +28,5 @@ jobs:
     - name: Lint with flake8 and pydocstyle
       run: |
         pip install flake8 pydocstyle
-        flake8 gateway_addon --count --max-line-length=79 --statistics
-        pydocstyle gateway_addon
+        flake8 gateway_addon --exclude schema --count --max-line-length=79 --statistics
+        pydocstyle --match-dir '^($!schama).*' gateway_addon
