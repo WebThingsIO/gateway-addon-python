@@ -29,6 +29,7 @@ class APIHandler:
             AddonManagerProxy(self.package_name, verbose=verbose)
         self.manager_proxy.add_api_handler(self)
 
+        self.gateway_version = self.manager_proxy.gateway_version
         self.user_profile = self.manager_proxy.user_profile
 
     def proxy_running(self):
