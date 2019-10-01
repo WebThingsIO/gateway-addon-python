@@ -293,7 +293,7 @@ class AddonManagerProxy:
                 break
 
             if self.verbose:
-                print('AddonMangerProxy: recv:', msg)
+                print('AddonManagerProxy: recv:', msg)
 
             if not msg:
                 break
