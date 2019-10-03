@@ -3,6 +3,7 @@
 from setuptools import setup, find_packages
 from codecs import open
 from os import path
+import subprocess
 import sys
 
 
@@ -11,6 +12,14 @@ here = path.abspath(path.dirname(__file__))
 # Get the long description from the README file.
 with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
+
+# Pull in the schemas
+subprocess.run(
+    'git submodule init && git submodule update',
+    shell=True,
+    cwd=here,
+    check=True,
+)
 
 requirements = [
     'nnpy==1.4.2',
