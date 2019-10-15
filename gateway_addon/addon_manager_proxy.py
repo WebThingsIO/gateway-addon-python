@@ -150,7 +150,7 @@ class AddonManagerProxy:
             print('AddonManagerProxy: handle_outlet_added:', outlet.id)
 
         data = {
-            'notifierId': outlet.adapter.id,
+            'notifierId': outlet.notifier.id,
             'outlet': outlet.as_dict(),
         }
         self.send(MessageType.OUTLET_ADDED_NOTIFICATION, data)
