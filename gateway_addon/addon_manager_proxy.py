@@ -465,6 +465,13 @@ class AddonManagerProxy:
                 del self.adapters[adapter.id]
                 continue
 
+            if msg_type == MessageType.DEVICE_SAVED_NOTIFICATION:
+                self.make_thread(
+                    adapter.handle_device_saved,
+                    args=(msg['data']['deviceId'], msg['data']['device'])
+                )
+                continue
+
             # All messages from here on are assumed to require a valid deviceId
             if 'data' not in msg or 'deviceId' not in msg['data']:
                 print('AddonManagerProxy: No deviceId present in message, '

@@ -23,7 +23,7 @@ subprocess.run(
 
 requirements = [
     'nnpy==1.4.2',
-    'jsonschema==3.0.2',
+    'jsonschema==3.1.1',
     'singleton-decorator==1.0.0',
 ]
 
