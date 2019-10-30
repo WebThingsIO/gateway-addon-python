@@ -143,6 +143,22 @@ class Adapter:
 
         self.manager_proxy.handle_device_removed(device)
 
+    def handle_device_saved(self, device_id, device):
+        """
+        Handle an indication that the user has saved a device to their gateway.
+
+        This is also called when the adapter starts up for every device which
+        has already been saved.
+
+        This can be used for keeping track of what devices have previously been
+        discovered, such that the adapter can rebuild those, clean up old
+        nodes, etc.
+
+        device_id -- ID of the device
+        device -- dict containing the saved device description
+        """
+        pass
+
     def start_pairing(self, timeout):
         """
         Start the pairing process.
