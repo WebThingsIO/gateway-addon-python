@@ -23,13 +23,13 @@ subprocess.run(
 
 requirements = [
     'nnpy==1.4.2',
-    'jsonschema==3.1.1',
+    'jsonschema==3.2.0',
     'singleton-decorator==1.0.0',
 ]
 
 setup(
     name='gateway_addon',
-    version='0.10.0',
+    version='0.10.1',
     description='Bindings for Mozilla WebThings Gateway add-ons',
     long_description=long_description,
     url='https://github.com/mozilla-iot/gateway-addon-python',
