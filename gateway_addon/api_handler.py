@@ -31,6 +31,7 @@ class APIHandler:
 
         self.gateway_version = self.manager_proxy.gateway_version
         self.user_profile = self.manager_proxy.user_profile
+        self.preferences = self.manager_proxy.preferences
 
     def proxy_running(self):
         """Return boolean indicating whether or not the proxy is running."""

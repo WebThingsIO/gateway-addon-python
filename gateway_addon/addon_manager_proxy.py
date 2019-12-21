@@ -40,6 +40,7 @@ class AddonManagerProxy:
         self.ipc_client = IpcClient(plugin_id, verbose=verbose)
         self.gateway_version = self.ipc_client.gateway_version
         self.user_profile = self.ipc_client.user_profile
+        self.preferences = self.ipc_client.preferences
         self.plugin_id = plugin_id
         self.verbose = verbose
         self.running = True

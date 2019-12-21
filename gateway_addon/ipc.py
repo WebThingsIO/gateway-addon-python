@@ -105,6 +105,7 @@ class IpcClient:
                 _IPC_BASE + resp['data']['ipcBaseAddr'])
             self.gateway_version = resp['data']['gatewayVersion']
             self.user_profile = resp['data']['userProfile']
+            self.preferences = resp['data']['preferences']
 
             if verbose:
                 print('IpcClient: Registered with PluginServer')
