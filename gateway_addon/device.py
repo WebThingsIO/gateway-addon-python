@@ -18,7 +18,6 @@ class Device:
         """
         self.adapter = adapter
         self.id = str(_id)
-        self.type = 'thing'
         self._context = 'https://iot.mozilla.org/schemas'
         self._type = []
         self.title = ''
@@ -46,7 +45,6 @@ class Device:
         return {
             'id': self.id,
             'title': self.title,
-            'type': self.type,
             '@context': self._context,
             '@type': self._type,
             'description': self.description,
@@ -74,7 +72,6 @@ class Device:
         thing = {
             'id': self.id,
             'title': self.title,
-            'type': self.type,
             '@context': self._context,
             '@type': self._type,
             'properties': self.get_property_descriptions(),
@@ -119,14 +116,6 @@ class Device:
             self.title = self.name
 
         return self.title
-
-    def get_type(self):
-        """
-        Get the type of the device.
-
-        Returns the type as a string.
-        """
-        return self.type
 
     def get_property_descriptions(self):
         """
