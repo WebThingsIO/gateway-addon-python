@@ -22,9 +22,9 @@ subprocess.run(
 )
 
 requirements = [
-    'nnpy==1.4.2',
     'jsonschema==3.2.0',
     'singleton-decorator==1.0.0',
+    'websocket-client==0.57.0',
 ]
 
 setup(

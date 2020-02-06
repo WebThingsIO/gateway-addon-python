@@ -1,17 +1,18 @@
 """IPC client to communicate with the Gateway."""
 
 from __future__ import print_function
-from nnpy.errors import NNError
 import functools
 import json
 import jsonschema
-import nnpy
 import os
+import threading
+import time
+import websocket
 
 from .constants import MessageType
 
 
-_IPC_BASE = 'ipc:///tmp/'
+_IPC_PORT = 9500
 _SCHEMA_DIR = os.path.realpath(
     os.path.join(os.path.dirname(__file__), 'schema')
 )
@@ -50,67 +51,84 @@ class Resolver(jsonschema.RefResolver):
 class IpcClient:
     """IPC client which can communicate between the Gateway and an add-on."""
 
-    def __init__(self, plugin_id, verbose=False):
+    def __init__(self, plugin_id, on_message, verbose=False):
         """
         Initialize the object.
 
         plugin_id -- ID of this plugin
+        on_message -- message handler
         verbose -- whether or not to enable verbose logging
         """
-        self.manager_socket = nnpy.Socket(nnpy.AF_SP, nnpy.REQ)
-        self.manager_conn = \
-            self.manager_socket.connect(_IPC_BASE + 'gateway.addonManager')
-
         with open(os.path.join(_SCHEMA_DIR, 'schema.json'), 'rt') as f:
             schema = json.load(f)
+
+        self.plugin_id = plugin_id
+        self.verbose = verbose
+        self.owner_message_handler = on_message
 
         self.validator = jsonschema.Draft7Validator(
             schema=schema,
             resolver=Resolver()
         )
 
-        if verbose:
+        self.registered = False
+
+        self.ws = websocket.WebSocketApp(
+            'ws://127.0.0.1:{}/'.format(_IPC_PORT),
+            on_open=self.on_open,
+            on_message=self.on_message,
+        )
+
+        self.thread = threading.Thread(target=self.ws.run_forever)
+        self.thread.daemon = True
+        self.thread.start()
+
+        while not self.registered:
+            time.sleep(0.01)
+
+    def on_open(self):
+        """Event handler for WebSocket opening."""
+        if self.verbose:
             print('IpcClient: Connected to server, registering...')
 
         try:
-            self.manager_socket.send(json.dumps({
+            self.ws.send(json.dumps({
                 'messageType': MessageType.PLUGIN_REGISTER_REQUEST,
                 'data': {
-                    'pluginId': plugin_id,
+                    'pluginId': self.plugin_id,
                 }
-            }).encode('utf-8'))
-        except NNError as e:
+            }))
+        except websocket.WebSocketException as e:
             print('IpcClient: Failed to send message: {}'.format(e))
             return
 
-        try:
-            resp = self.manager_socket.recv()
-        except NNError as e:
-            print('IpcClient: Error receiving message: {}'.format(e))
-            return
+    def on_message(self, message):
+        """
+        Event handler for WebSocket messages.
 
-        if verbose:
-            print('IpcClient: Received manager message: {}'.format(resp))
-
+        message -- the received message
+        """
         try:
-            resp = json.loads(resp.decode('utf-8'))
+            resp = json.loads(message)
 
             self.validator.validate({'message': resp})
 
-            if resp['messageType'] != MessageType.PLUGIN_REGISTER_RESPONSE:
-                raise ValueError()
+            if resp['messageType'] == MessageType.PLUGIN_REGISTER_RESPONSE:
+                if self.verbose:
+                    print('IpcClient: Registered with PluginServer')
 
-            self.plugin_socket = nnpy.Socket(nnpy.AF_SP, nnpy.PAIR)
-            self.plugin_conn = self.plugin_socket.connect(
-                _IPC_BASE + resp['data']['ipcBaseAddr'])
-            self.gateway_version = resp['data']['gatewayVersion']
-            self.user_profile = resp['data']['userProfile']
-            self.preferences = resp['data']['preferences']
-
-            if verbose:
-                print('IpcClient: Registered with PluginServer')
+                self.gateway_version = resp['data']['gatewayVersion']
+                self.user_profile = resp['data']['userProfile']
+                self.preferences = resp['data']['preferences']
+                self.registered = True
+            else:
+                self.owner_message_handler(resp)
         except ValueError:
             print('IpcClient: Unexpected registration reply from gateway: {}'
                   .format(resp))
         except jsonschema.exceptions.ValidationError:
             print('Invalid message received:', resp)
+
+    def close(self):
+        """Close the WebSocket."""
+        self.ws.close()
