@@ -1,13 +1,12 @@
 """Proxy for sending messages between the Gateway and an add-on."""
 
 from __future__ import print_function
-from nnpy.errors import NNError
 from singleton_decorator import singleton
 import functools
 import json
-import jsonschema
 import threading
 import time
+import websocket
 
 from .api_handler_utils import APIRequest, APIResponse
 from .constants import MessageType
@@ -37,26 +36,26 @@ class AddonManagerProxy:
         self.adapters = {}
         self.notifiers = {}
         self.api_handlers = {}
-        self.ipc_client = IpcClient(plugin_id, verbose=verbose)
+        self.ipc_client = IpcClient(
+            plugin_id,
+            self.on_message,
+            verbose=verbose
+        )
         self.gateway_version = self.ipc_client.gateway_version
         self.user_profile = self.ipc_client.user_profile
         self.preferences = self.ipc_client.preferences
         self.plugin_id = plugin_id
         self.verbose = verbose
         self.running = True
-        self.thread = threading.Thread(target=self.recv)
-        self.thread.daemon = True
-        self.thread.start()
 
     def close(self):
         """Close the proxy."""
-        self.running = False
-
         try:
-            self.ipc_client.manager_socket.close()
-            self.ipc_client.plugin_socket.close()
-        except NNError:
+            self.ipc_client.close()
+        except websocket.WebSocketException:
             pass
+
+        self.running = False
 
     def send_error(self, message):
         """
@@ -276,371 +275,349 @@ class AddonManagerProxy:
         data['pluginId'] = self.plugin_id
 
         try:
-            self.ipc_client.plugin_socket.send(json.dumps({
+            self.ipc_client.ws.send(json.dumps({
                 'messageType': msg_type,
                 'data': data,
-            }).encode('utf-8'))
-        except NNError as e:
+            }))
+        except websocket.WebSocketException as e:
             print('AddonManagerProxy: Failed to send message: {}'.format(e))
 
-    def recv(self):
+    def on_message(self, msg):
         """Read a message from the IPC socket."""
-        while self.running:
-            try:
-                msg = self.ipc_client.plugin_socket.recv()
-            except NNError as e:
-                print('AddonManagerProxy: Error receiving message from '
-                      'socket: {}'.format(e))
-                break
+        if self.verbose:
+            print('AddonManagerProxy: recv:', msg)
 
-            if self.verbose:
-                print('AddonManagerProxy: recv:', msg)
+        msg_type = msg['messageType']
 
-            if not msg:
-                break
+        if msg_type == MessageType.PLUGIN_UNLOAD_REQUEST:
+            self.send(MessageType.PLUGIN_UNLOAD_RESPONSE, {})
 
-            try:
-                msg = json.loads(msg.decode('utf-8'))
-            except ValueError:
-                print('AddonManagerProxy: Error parsing message as JSON')
-                continue
+            def close_fn(proxy):
+                # Give the message above time to be sent and received.
+                time.sleep(.5)
+                proxy.close()
 
-            try:
-                self.ipc_client.validator.validate({'message': msg})
-            except jsonschema.exceptions.ValidationError:
-                print('Invalid message received:', msg)
+            self.make_thread(close_fn, args=(self,))
+            return
 
-            msg_type = msg['messageType']
+        if 'data' not in msg:
+            print('AddonManagerProxy: data not present in message')
+            return
 
-            if msg_type == MessageType.PLUGIN_UNLOAD_REQUEST:
-                self.send(MessageType.PLUGIN_UNLOAD_RESPONSE, {})
-
-                def close_fn(proxy):
-                    # Give the message above time to be sent and received.
-                    time.sleep(.5)
-                    proxy.close()
-
-                self.make_thread(close_fn, args=(self,))
-                break
-
-            if 'data' not in msg:
-                print('AddonManagerProxy: data not present in message')
-                continue
-
-            if msg_type == MessageType.API_HANDLER_UNLOAD_REQUEST:
-                package_name = msg['data']['packageName']
-                if package_name not in self.api_handlers:
-                    print('AddonManager: Unrecognized handler, ignoring '
-                          'message.')
-                    continue
-
-                handler = self.api_handlers[package_name]
-
-                def unload_fn(proxy, handler):
-                    handler.unload()
-                    proxy.send(MessageType.API_HANDLER_UNLOAD_RESPONSE,
-                               {'packageName': handler.package_name})
-
-                self.make_thread(unload_fn, args=(self, handler))
-                del self.api_handlers[handler.package_name]
-                continue
-
-            if msg_type == MessageType.API_HANDLER_API_REQUEST:
-                package_name = msg['data']['packageName']
-                if package_name not in self.api_handlers:
-                    print('AddonManager: Unrecognized handler, ignoring '
-                          'message.')
-                    continue
-
-                handler = self.api_handlers[package_name]
-
-                def request_fn(proxy, handler):
-                    message_id = msg['data']['messageId']
-
-                    try:
-                        request = APIRequest(**msg['data']['request'])
-                        response = handler.handle_request(request)
-
-                        proxy.send(MessageType.API_HANDLER_API_RESPONSE, {
-                            'packageName': package_name,
-                            'messageId': message_id,
-                            'response': response.to_json()
-                        })
-                    except APIHandlerError as e:
-                        proxy.send(MessageType.API_HANDLER_API_RESPONSE, {
-                            'packageName': package_name,
-                            'messageId': message_id,
-                            'response': APIResponse(
-                                status=500,
-                                content_type='text/plain',
-                                content=str(e),
-                            ).to_json(),
-                        })
-
-                self.make_thread(request_fn, args=(self, handler))
-                continue
-
-            if 'notifierId' in msg['data']:
-                notifier_id = msg['data']['notifierId']
-                if notifier_id not in self.notifiers:
-                    print('AddonManagerProxy: Unrecognized notifier, ignoring '
-                          'message.')
-                    continue
-
-                notifier = self.notifiers[notifier_id]
-
-                if msg_type == MessageType.NOTIFIER_UNLOAD_REQUEST:
-                    def unload_fn(proxy, notifier):
-                        notifier.unload()
-                        proxy.send(MessageType.NOTIFIER_UNLOAD_RESPONSE,
-                                   {'notifierId': notifier.id})
-
-                    self.make_thread(unload_fn, args=(self, notifier))
-                    del self.notifiers[notifier.id]
-                    continue
-
-                if msg_type == MessageType.OUTLET_NOTIFY_REQUEST:
-                    def notify_fn(proxy, notifier):
-                        outlet_id = msg['data']['outletId']
-                        outlet = notifier.get_outlet(outlet_id)
-                        if outlet is None:
-                            print('AddonManagerProxy: No such outlet, '
-                                  'ignoring message.')
-                            return
-
-                        message_id = msg['data']['messageId']
-
-                        try:
-                            outlet.notify(msg['data']['title'],
-                                          msg['data']['message'],
-                                          msg['data']['level'])
-
-                            proxy.send(MessageType.OUTLET_NOTIFY_RESPONSE, {
-                                'notifierId': notifier_id,
-                                'outletId': outlet_id,
-                                'messageId': message_id,
-                                'success': True,
-                            })
-                        except NotifyError:
-                            proxy.send(MessageType.OUTLET_NOTIFY_RESPONSE, {
-                                'notifierId': notifier_id,
-                                'outletId': outlet_id,
-                                'messageId': message_id,
-                                'success': False,
-                            })
-
-                    self.make_thread(notify_fn, args=(self, notifier))
-                    continue
-
-                continue
-
-            if 'adapterId' not in msg['data']:
-                print('AddonManagerProxy: Adapter ID not present in message.')
-                continue
-
-            adapter_id = msg['data']['adapterId']
-            if adapter_id not in self.adapters:
-                print('AddonManagerProxy: Unrecognized adapter, ignoring '
+        if msg_type == MessageType.API_HANDLER_UNLOAD_REQUEST:
+            package_name = msg['data']['packageName']
+            if package_name not in self.api_handlers:
+                print('AddonManager: Unrecognized handler, ignoring '
                       'message.')
-                continue
+                return
 
-            adapter = self.adapters[adapter_id]
+            handler = self.api_handlers[package_name]
 
-            # High-level adapter messages
-            if msg_type == MessageType.ADAPTER_START_PAIRING_COMMAND:
-                self.make_thread(adapter.start_pairing,
-                                 args=(msg['data']['timeout'],))
-                continue
+            def unload_fn(proxy, handler):
+                handler.unload()
+                proxy.send(MessageType.API_HANDLER_UNLOAD_RESPONSE,
+                           {'packageName': handler.package_name})
 
-            if msg_type == MessageType.ADAPTER_CANCEL_PAIRING_COMMAND:
-                self.make_thread(adapter.cancel_pairing)
-                continue
+            self.make_thread(unload_fn, args=(self, handler))
+            del self.api_handlers[handler.package_name]
+            return
 
-            if msg_type == MessageType.ADAPTER_UNLOAD_REQUEST:
-                def unload_fn(proxy, adapter):
-                    adapter.unload()
-                    proxy.send(MessageType.ADAPTER_UNLOAD_RESPONSE,
-                               {'adapterId': adapter.id})
+        if msg_type == MessageType.API_HANDLER_API_REQUEST:
+            package_name = msg['data']['packageName']
+            if package_name not in self.api_handlers:
+                print('AddonManager: Unrecognized handler, ignoring '
+                      'message.')
+                return
 
-                self.make_thread(unload_fn, args=(self, adapter))
-                del self.adapters[adapter.id]
-                continue
+            handler = self.api_handlers[package_name]
 
-            if msg_type == MessageType.DEVICE_SAVED_NOTIFICATION:
-                self.make_thread(
-                    adapter.handle_device_saved,
-                    args=(msg['data']['deviceId'], msg['data']['device'])
-                )
-                continue
+            def request_fn(proxy, handler):
+                message_id = msg['data']['messageId']
 
-            # All messages from here on are assumed to require a valid deviceId
-            if 'data' not in msg or 'deviceId' not in msg['data']:
-                print('AddonManagerProxy: No deviceId present in message, '
-                      'ignoring.')
-                continue
+                try:
+                    request = APIRequest(**msg['data']['request'])
+                    response = handler.handle_request(request)
 
-            device_id = msg['data']['deviceId']
-            if msg_type == MessageType.ADAPTER_REMOVE_DEVICE_REQUEST:
-                self.make_thread(adapter.remove_thing, args=(device_id,))
-                continue
+                    proxy.send(MessageType.API_HANDLER_API_RESPONSE, {
+                        'packageName': package_name,
+                        'messageId': message_id,
+                        'response': response.to_json()
+                    })
+                except APIHandlerError as e:
+                    proxy.send(MessageType.API_HANDLER_API_RESPONSE, {
+                        'packageName': package_name,
+                        'messageId': message_id,
+                        'response': APIResponse(
+                            status=500,
+                            content_type='text/plain',
+                            content=str(e),
+                        ).to_json(),
+                    })
 
-            if msg_type == MessageType.ADAPTER_CANCEL_REMOVE_DEVICE_COMMAND:
-                self.make_thread(adapter.cancel_remove_thing,
-                                 args=(device_id,))
-                continue
+            self.make_thread(request_fn, args=(self, handler))
+            return
 
-            if msg_type == MessageType.DEVICE_SET_PROPERTY_COMMAND:
-                def set_prop_fn(proxy, adapter):
-                    dev = adapter.get_device(device_id)
-                    if not dev:
+        if 'notifierId' in msg['data']:
+            notifier_id = msg['data']['notifierId']
+            if notifier_id not in self.notifiers:
+                print('AddonManagerProxy: Unrecognized notifier, ignoring '
+                      'message.')
+                return
+
+            notifier = self.notifiers[notifier_id]
+
+            if msg_type == MessageType.NOTIFIER_UNLOAD_REQUEST:
+                def unload_fn(proxy, notifier):
+                    notifier.unload()
+                    proxy.send(MessageType.NOTIFIER_UNLOAD_RESPONSE,
+                               {'notifierId': notifier.id})
+
+                self.make_thread(unload_fn, args=(self, notifier))
+                del self.notifiers[notifier.id]
+                return
+
+            if msg_type == MessageType.OUTLET_NOTIFY_REQUEST:
+                def notify_fn(proxy, notifier):
+                    outlet_id = msg['data']['outletId']
+                    outlet = notifier.get_outlet(outlet_id)
+                    if outlet is None:
+                        print('AddonManagerProxy: No such outlet, '
+                              'ignoring message.')
                         return
 
-                    prop = dev.find_property(msg['data']['propertyName'])
-                    if not prop:
-                        return
-
-                    try:
-                        prop.set_value(msg['data']['propertyValue'])
-                        if prop.fire_and_forget:
-                            proxy.send_property_changed_notification(prop)
-                    except PropertyError:
-                        proxy.send_property_changed_notification(prop)
-
-                self.make_thread(set_prop_fn, args=(self, adapter))
-                continue
-
-            if msg_type == MessageType.DEVICE_REQUEST_ACTION_REQUEST:
-                def request_action_fn(proxy, adapter):
-                    action_id = msg['data']['actionId']
-                    action_name = msg['data']['actionName']
-
-                    try:
-                        dev = adapter.get_device(device_id)
-
-                        if dev:
-                            action_input = None
-                            if 'input' in msg['data']:
-                                action_input = msg['data']['input']
-
-                            dev.request_action(action_id,
-                                               action_name,
-                                               action_input)
-
-                        proxy.send(
-                            MessageType.DEVICE_REQUEST_ACTION_RESPONSE,
-                            {
-                                'adapterId': adapter_id,
-                                'deviceId': device_id,
-                                'actionName': action_name,
-                                'actionId': action_id,
-                                'success': True,
-                            }
-                        )
-                    except ActionError:
-                        proxy.send(
-                            MessageType.DEVICE_REQUEST_ACTION_RESPONSE,
-                            {
-                                'adapterId': adapter_id,
-                                'deviceId': device_id,
-                                'actionName': action_name,
-                                'actionId': action_id,
-                                'success': False,
-                            }
-                        )
-
-                self.make_thread(request_action_fn, args=(self, adapter))
-                continue
-
-            if msg_type == MessageType.DEVICE_REMOVE_ACTION_REQUEST:
-                def remove_action_fn(proxy, adapter):
-                    action_id = msg['data']['actionId']
-                    action_name = msg['data']['actionName']
                     message_id = msg['data']['messageId']
 
                     try:
-                        dev = adapter.get_device(device_id)
+                        outlet.notify(msg['data']['title'],
+                                      msg['data']['message'],
+                                      msg['data']['level'])
 
-                        if dev:
-                            dev.remove_action(action_id, action_name)
-
-                        proxy.send(MessageType.DEVICE_REMOVE_ACTION_RESPONSE, {
-                            'adapterId': adapter_id,
-                            'actionName': action_name,
-                            'actionId': action_id,
+                        proxy.send(MessageType.OUTLET_NOTIFY_RESPONSE, {
+                            'notifierId': notifier_id,
+                            'outletId': outlet_id,
                             'messageId': message_id,
-                            'deviceId': device_id,
                             'success': True,
                         })
-                    except ActionError:
-                        proxy.send(MessageType.DEVICE_REMOVE_ACTION_RESPONSE, {
-                            'adapterId': adapter_id,
-                            'actionName': action_name,
-                            'actionId': action_id,
+                    except NotifyError:
+                        proxy.send(MessageType.OUTLET_NOTIFY_RESPONSE, {
+                            'notifierId': notifier_id,
+                            'outletId': outlet_id,
                             'messageId': message_id,
-                            'deviceId': device_id,
                             'success': False,
                         })
 
-                self.make_thread(remove_action_fn, args=(self, adapter))
-                continue
+                self.make_thread(notify_fn, args=(self, notifier))
+                return
 
-            if msg_type == MessageType.DEVICE_SET_PIN_REQUEST:
-                def set_pin_fn(proxy, adapter):
-                    message_id = msg['data']['messageId']
+            return
 
-                    try:
-                        adapter.set_pin(device_id, msg['data']['pin'])
+        if 'adapterId' not in msg['data']:
+            print('AddonManagerProxy: Adapter ID not present in message.')
+            return
 
-                        dev = adapter.get_device(device_id)
-                        proxy.send(MessageType.DEVICE_SET_PIN_RESPONSE, {
+        adapter_id = msg['data']['adapterId']
+        if adapter_id not in self.adapters:
+            print('AddonManagerProxy: Unrecognized adapter, ignoring '
+                  'message.')
+            return
+
+        adapter = self.adapters[adapter_id]
+
+        # High-level adapter messages
+        if msg_type == MessageType.ADAPTER_START_PAIRING_COMMAND:
+            self.make_thread(adapter.start_pairing,
+                             args=(msg['data']['timeout'],))
+            return
+
+        if msg_type == MessageType.ADAPTER_CANCEL_PAIRING_COMMAND:
+            self.make_thread(adapter.cancel_pairing)
+            return
+
+        if msg_type == MessageType.ADAPTER_UNLOAD_REQUEST:
+            def unload_fn(proxy, adapter):
+                adapter.unload()
+                proxy.send(MessageType.ADAPTER_UNLOAD_RESPONSE,
+                           {'adapterId': adapter.id})
+
+            self.make_thread(unload_fn, args=(self, adapter))
+            del self.adapters[adapter.id]
+            return
+
+        if msg_type == MessageType.DEVICE_SAVED_NOTIFICATION:
+            self.make_thread(
+                adapter.handle_device_saved,
+                args=(msg['data']['deviceId'], msg['data']['device'])
+            )
+            return
+
+        # All messages from here on are assumed to require a valid deviceId
+        if 'data' not in msg or 'deviceId' not in msg['data']:
+            print('AddonManagerProxy: No deviceId present in message, '
+                  'ignoring.')
+            return
+
+        device_id = msg['data']['deviceId']
+        if msg_type == MessageType.ADAPTER_REMOVE_DEVICE_REQUEST:
+            self.make_thread(adapter.remove_thing, args=(device_id,))
+            return
+
+        if msg_type == MessageType.ADAPTER_CANCEL_REMOVE_DEVICE_COMMAND:
+            self.make_thread(adapter.cancel_remove_thing,
+                             args=(device_id,))
+            return
+
+        if msg_type == MessageType.DEVICE_SET_PROPERTY_COMMAND:
+            def set_prop_fn(proxy, adapter):
+                dev = adapter.get_device(device_id)
+                if not dev:
+                    return
+
+                prop = dev.find_property(msg['data']['propertyName'])
+                if not prop:
+                    return
+
+                try:
+                    prop.set_value(msg['data']['propertyValue'])
+                    if prop.fire_and_forget:
+                        proxy.send_property_changed_notification(prop)
+                except PropertyError:
+                    proxy.send_property_changed_notification(prop)
+
+            self.make_thread(set_prop_fn, args=(self, adapter))
+            return
+
+        if msg_type == MessageType.DEVICE_REQUEST_ACTION_REQUEST:
+            def request_action_fn(proxy, adapter):
+                action_id = msg['data']['actionId']
+                action_name = msg['data']['actionName']
+
+                try:
+                    dev = adapter.get_device(device_id)
+
+                    if dev:
+                        action_input = None
+                        if 'input' in msg['data']:
+                            action_input = msg['data']['input']
+
+                        dev.request_action(action_id,
+                                           action_name,
+                                           action_input)
+
+                    proxy.send(
+                        MessageType.DEVICE_REQUEST_ACTION_RESPONSE,
+                        {
+                            'adapterId': adapter_id,
+                            'deviceId': device_id,
+                            'actionName': action_name,
+                            'actionId': action_id,
+                            'success': True,
+                        }
+                    )
+                except ActionError:
+                    proxy.send(
+                        MessageType.DEVICE_REQUEST_ACTION_RESPONSE,
+                        {
+                            'adapterId': adapter_id,
+                            'deviceId': device_id,
+                            'actionName': action_name,
+                            'actionId': action_id,
+                            'success': False,
+                        }
+                    )
+
+            self.make_thread(request_action_fn, args=(self, adapter))
+            return
+
+        if msg_type == MessageType.DEVICE_REMOVE_ACTION_REQUEST:
+            def remove_action_fn(proxy, adapter):
+                action_id = msg['data']['actionId']
+                action_name = msg['data']['actionName']
+                message_id = msg['data']['messageId']
+
+                try:
+                    dev = adapter.get_device(device_id)
+
+                    if dev:
+                        dev.remove_action(action_id, action_name)
+
+                    proxy.send(MessageType.DEVICE_REMOVE_ACTION_RESPONSE, {
+                        'adapterId': adapter_id,
+                        'actionName': action_name,
+                        'actionId': action_id,
+                        'messageId': message_id,
+                        'deviceId': device_id,
+                        'success': True,
+                    })
+                except ActionError:
+                    proxy.send(MessageType.DEVICE_REMOVE_ACTION_RESPONSE, {
+                        'adapterId': adapter_id,
+                        'actionName': action_name,
+                        'actionId': action_id,
+                        'messageId': message_id,
+                        'deviceId': device_id,
+                        'success': False,
+                    })
+
+            self.make_thread(remove_action_fn, args=(self, adapter))
+            return
+
+        if msg_type == MessageType.DEVICE_SET_PIN_REQUEST:
+            def set_pin_fn(proxy, adapter):
+                message_id = msg['data']['messageId']
+
+                try:
+                    adapter.set_pin(device_id, msg['data']['pin'])
+
+                    dev = adapter.get_device(device_id)
+                    proxy.send(MessageType.DEVICE_SET_PIN_RESPONSE, {
+                        'device': dev.as_dict(),
+                        'messageId': message_id,
+                        'adapterId': adapter.id,
+                        'success': True,
+                    })
+                except SetPinError:
+                    proxy.send(MessageType.DEVICE_SET_PIN_RESPONSE, {
+                        'deviceId': device_id,
+                        'messageId': message_id,
+                        'adapterId': adapter.id,
+                        'success': False,
+                    })
+
+            self.make_thread(set_pin_fn, args=(self, adapter))
+            return
+
+        if msg_type == MessageType.DEVICE_SET_CREDENTIALS_REQUEST:
+            def set_credentials_fn(proxy, adapter):
+                message_id = msg['data']['messageId']
+
+                try:
+                    adapter.set_credentials(device_id,
+                                            msg['data']['username'],
+                                            msg['data']['password'])
+
+                    dev = adapter.get_device(device_id)
+                    proxy.send(
+                        MessageType.DEVICE_SET_CREDENTIALS_RESPONSE,
+                        {
                             'device': dev.as_dict(),
                             'messageId': message_id,
                             'adapterId': adapter.id,
                             'success': True,
-                        })
-                    except SetPinError:
-                        proxy.send(MessageType.DEVICE_SET_PIN_RESPONSE, {
+                        }
+                    )
+                except SetCredentialsError:
+                    proxy.send(
+                        MessageType.DEVICE_SET_CREDENTIALS_RESPONSE,
+                        {
                             'deviceId': device_id,
                             'messageId': message_id,
                             'adapterId': adapter.id,
                             'success': False,
-                        })
+                        }
+                    )
 
-                self.make_thread(set_pin_fn, args=(self, adapter))
-                continue
-
-            if msg_type == MessageType.DEVICE_SET_CREDENTIALS_REQUEST:
-                def set_credentials_fn(proxy, adapter):
-                    message_id = msg['data']['messageId']
-
-                    try:
-                        adapter.set_credentials(device_id,
-                                                msg['data']['username'],
-                                                msg['data']['password'])
-
-                        dev = adapter.get_device(device_id)
-                        proxy.send(
-                            MessageType.DEVICE_SET_CREDENTIALS_RESPONSE,
-                            {
-                                'device': dev.as_dict(),
-                                'messageId': message_id,
-                                'adapterId': adapter.id,
-                                'success': True,
-                            }
-                        )
-                    except SetCredentialsError:
-                        proxy.send(
-                            MessageType.DEVICE_SET_CREDENTIALS_RESPONSE,
-                            {
-                                'deviceId': device_id,
-                                'messageId': message_id,
-                                'adapterId': adapter.id,
-                                'success': False,
-                            }
-                        )
-
-                self.make_thread(set_credentials_fn, args=(self, adapter))
-                continue
+            self.make_thread(set_credentials_fn, args=(self, adapter))
+            return
 
     @staticmethod
     def make_thread(target, args=()):
