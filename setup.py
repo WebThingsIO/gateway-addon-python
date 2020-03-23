@@ -29,7 +29,7 @@ requirements = [
 
 setup(
     name='gateway_addon',
-    version='0.11.0',
+    version='0.12.0',
     description='Bindings for Mozilla WebThings Gateway add-ons',
     long_description=long_description,
     url='https://github.com/mozilla-iot/gateway-addon-python',
