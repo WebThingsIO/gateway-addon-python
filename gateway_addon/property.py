@@ -141,10 +141,13 @@ class Property:
             raise PropertyError('Value greater than maximum: {}'
                                 .format(self.description['maximum']))
 
-        if 'multipleOf' in self.description and \
-                value % self.description['multipleOf'] != 0:
-            raise PropertyError('Value is not a multiple of: {}'
-                                .format(self.description['multipleOf']))
+        if 'multipleOf' in self.description:
+            # note that we don't use the modulus operator here because it's
+            # unreliable for floating point numbers
+            multiple_of = self.description['multipleOf']
+            if value / multiple_of - round(value / multiple_of) != 0:
+                raise PropertyError('Value is not a multiple of: {}'
+                                    .format(multiple_of))
 
         if 'enum' in self.description and \
                 len(self.description['enum']) > 0 and \
