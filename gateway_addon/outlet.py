@@ -56,5 +56,6 @@ class Outlet:
         message -- message of notification
         level -- alert level
         """
-        print('Outlet: {} notify("{}", "{}", {})'
-              .format(self.name, title, message, level))
+        if self.notifier.verbose:
+            print('Outlet: {} notify("{}", "{}", {})'
+                  .format(self.name, title, message, level))

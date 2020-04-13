@@ -34,6 +34,7 @@ class Adapter:
         # False in its constructor.
         self.ready = True
 
+        self.verbose = verbose
         self.manager_proxy = \
             AddonManagerProxy(self.package_name, verbose=verbose)
         self.manager_proxy.add_adapter(self)
@@ -60,7 +61,8 @@ class Adapter:
 
     def dump(self):
         """Dump the state of the adapter to the log."""
-        print('Adapter:', self.name, '- dump() not implemented')
+        if self.verbose:
+            print('Adapter:', self.name, '- dump() not implemented')
 
     def get_id(self):
         """
@@ -166,7 +168,8 @@ class Adapter:
 
         timeout -- Timeout in seconds at which to quit pairing
         """
-        print('Adapter:', self.name, 'id', self.id, 'pairing started')
+        if self.verbose:
+            print('Adapter:', self.name, 'id', self.id, 'pairing started')
 
     def send_pairing_prompt(self, prompt, url=None, device=None):
         """
@@ -190,7 +193,8 @@ class Adapter:
 
     def cancel_pairing(self):
         """Cancel the pairing process."""
-        print('Adapter:', self.name, 'id', self.id, 'pairing cancelled')
+        if self.verbose:
+            print('Adapter:', self.name, 'id', self.id, 'pairing cancelled')
 
     def remove_thing(self, device_id):
         """
@@ -200,8 +204,9 @@ class Adapter:
         """
         device = self.get_device(device_id)
         if device:
-            print('Adapter:', self.name, 'id', self.id,
-                  'remove_thing(' + device.id + ')')
+            if self.verbose:
+                print('Adapter:', self.name, 'id', self.id,
+                      'remove_thing(' + device.id + ')')
 
             self.handle_device_removed(device)
 
@@ -212,13 +217,14 @@ class Adapter:
         device_id -- ID of device to cancel unpairing with
         """
         device = self.get_device(device_id)
-        if device:
+        if device and self.verbose:
             print('Adapter:', self.name, 'id', self.id,
                   'cancel_remove_thing(' + device.id + ')')
 
     def unload(self):
         """Perform any necessary cleanup before adapter is shut down."""
-        print('Adapter:', self.name, 'unloaded')
+        if self.verbose:
+            print('Adapter:', self.name, 'unloaded')
 
     def set_pin(self, device_id, pin):
         """
@@ -229,8 +235,9 @@ class Adapter:
         """
         device = self.get_device(device_id)
         if device:
-            print('Adapter:', self.name, 'id', self.id,
-                  'set_pin(' + device.id + ', ' + pin + ')')
+            if self.verbose:
+                print('Adapter:', self.name, 'id', self.id,
+                      'set_pin(' + device.id + ', ' + pin + ')')
         else:
             raise SetPinError('Device not found')
 
@@ -244,8 +251,9 @@ class Adapter:
         """
         device = self.get_device(device_id)
         if device:
-            print('Adapter:', self.name, 'id', self.id,
-                  'set_credentials(' + device.id + ', ' + username + ', ' +
-                  password + ')')
+            if self.verbose:
+                print('Adapter:', self.name, 'id', self.id,
+                      'set_credentials(' + device.id + ', ' + username + ', ' +
+                      password + ')')
         else:
             raise SetCredentialsError('Device not found')

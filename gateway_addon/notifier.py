@@ -32,6 +32,7 @@ class Notifier:
         # False in its constructor.
         self.ready = True
 
+        self.verbose = verbose
         self.manager_proxy = \
             AddonManagerProxy(self.package_name, verbose=verbose)
         self.manager_proxy.add_notifier(self)
@@ -58,7 +59,8 @@ class Notifier:
 
     def dump(self):
         """Dump the state of the notifier to the log."""
-        print('Notifier:', self.name, '- dump() not implemented')
+        if self.verbose:
+            print('Notifier:', self.name, '- dump() not implemented')
 
     def get_id(self):
         """
@@ -144,4 +146,5 @@ class Notifier:
 
     def unload(self):
         """Perform any necessary cleanup before notifier is shut down."""
-        print('Notifier:', self.name, 'unloaded')
+        if self.verbose:
+            print('Notifier:', self.name, 'unloaded')
