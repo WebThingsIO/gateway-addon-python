@@ -25,6 +25,7 @@ class APIHandler:
         """
         self.package_name = package_name
 
+        self.verbose = verbose
         self.manager_proxy = \
             AddonManagerProxy(self.package_name, verbose=verbose)
         self.manager_proxy.add_api_handler(self)
@@ -63,9 +64,13 @@ class APIHandler:
 
         request -- APIRequest object
         """
-        print('New API request for {}: {}'.format(self.package_name, request))
+        if self.verbose:
+            print('New API request for {}: {}'
+                  .format(self.package_name, request))
+
         return APIResponse(status=404)
 
     def unload(self):
         """Perform any necessary cleanup before handler is shut down."""
-        print('API Handler:', self.package_name, 'unloaded')
+        if self.verbose:
+            print('API Handler:', self.package_name, 'unloaded')
