@@ -7,20 +7,16 @@ import sqlite3
 
 _DB_PATHS = [
     os.path.join(os.path.expanduser('~'),
-                 'mozilla-iot',
-                 'gateway',
-                 'db.sqlite3'),
-    os.path.join(os.path.expanduser('~'),
-                 '.mozilla-iot',
+                 '.webthings',
                  'config',
                  'db.sqlite3'),
-    os.path.join('.', 'db.sqlite3'),               # if cwd is the gateway dir
-    os.path.join('..', '..', '..', 'db.sqlite3'),  # if cwd is the add-on dir
 ]
 
 if 'WEBTHINGS_HOME' in os.environ:
     _DB_PATHS.insert(
-        0, os.path.join(os.environ['WEBTHINGS_HOME'], 'config', 'db.sqlite3'))
+        0,
+        os.path.join(os.environ['WEBTHINGS_HOME'], 'config', 'db.sqlite3')
+    )
 
 if 'WEBTHINGS_DATABASE' in os.environ:
     _DB_PATHS.insert(0, os.environ['WEBTHINGS_DATABASE'])
