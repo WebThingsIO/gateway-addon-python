@@ -18,12 +18,12 @@ _DB_PATHS = [
     os.path.join('..', '..', '..', 'db.sqlite3'),  # if cwd is the add-on dir
 ]
 
-if 'MOZIOT_HOME' in os.environ:
+if 'WEBTHINGS_HOME' in os.environ:
     _DB_PATHS.insert(
-        0, os.path.join(os.environ['MOZIOT_HOME'], 'config', 'db.sqlite3'))
+        0, os.path.join(os.environ['WEBTHINGS_HOME'], 'config', 'db.sqlite3'))
 
-if 'MOZIOT_DATABASE' in os.environ:
-    _DB_PATHS.insert(0, os.environ['MOZIOT_DATABASE'])
+if 'WEBTHINGS_DATABASE' in os.environ:
+    _DB_PATHS.insert(0, os.environ['WEBTHINGS_DATABASE'])
 
 
 class Database:
