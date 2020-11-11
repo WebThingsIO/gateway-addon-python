@@ -18,7 +18,7 @@ class Device:
         """
         self.adapter = adapter
         self.id = str(_id)
-        self._context = 'https://iot.mozilla.org/schemas'
+        self._context = 'https://webthings.io/schemas'
         self._type = []
         self.title = ''
         self.description = ''
