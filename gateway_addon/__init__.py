@@ -16,7 +16,7 @@ from .notifier import Notifier
 from .outlet import Outlet
 from .property import Property
 
-__version__ = '0.12.0'
+__version__ = '1.0.0'
 API_VERSION = 2
 
 

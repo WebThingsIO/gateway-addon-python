@@ -29,7 +29,7 @@ requirements = [
 
 setup(
     name='gateway_addon',
-    version='0.12.0',
+    version='1.0.0',
     description='Bindings for WebThings Gateway add-ons',
     long_description=long_description,
     url='https://github.com/WebThingsIO/gateway-addon-python',
