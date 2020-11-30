@@ -49,14 +49,9 @@ class Action:
 
         Returns a dictionary describing the action.
         """
-        return {
-            'id': self.id,
-            'name': self.name,
-            'input': self.input,
-            'status': self.status,
-            'timeRequested': self.time_requested,
-            'timeCompleted': self.time_completed,
-        }
+        d = self.as_action_description()
+        d['id'] = self.id
+        return d
 
     def start(self):
         """Start performing the action."""

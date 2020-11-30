@@ -75,11 +75,13 @@ class Device:
             '@context': self._context,
             '@type': self._type,
             'properties': self.get_property_descriptions(),
+            'actions': self.actions,
+            'events': self.events,
             'links': self.links,
             'baseHref': self.base_href,
             'pin': {
                 'required': self.pin_required,
-                'pattern': self.pin_regex,
+                'pattern': self.pin_pattern,
             },
             'credentialsRequired': self.credentials_required,
         }

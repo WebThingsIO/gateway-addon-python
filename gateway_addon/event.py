@@ -41,8 +41,4 @@ class Event:
 
         Returns a dictionary describing the event.
         """
-        return {
-            'name': self.name,
-            'data': self.data,
-            'timestamp': self.timestamp,
-        }
+        return self.as_event_description()
