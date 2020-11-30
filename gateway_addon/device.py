@@ -26,9 +26,9 @@ class Device:
         self.actions = {}
         self.events = {}
         self.links = []
-        self.base_href = None
+        self.base_href = ''
         self.pin_required = False
-        self.pin_pattern = None
+        self.pin_pattern = ''
         self.credentials_required = False
 
     def as_dict(self):
