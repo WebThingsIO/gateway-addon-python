@@ -99,15 +99,6 @@ class Device:
         """
         return self.id
 
-    def get_name(self):
-        """
-        Get the name of the device.
-
-        Returns the name as a string.
-        """
-        print('get_name() is deprecated. Please use get_title().')
-        return self.get_title()
-
     def get_title(self):
         """
         Get the title of the device.
