@@ -18,11 +18,7 @@ class Property:
         self.name = name
         self.value = None
         self.description = {}
-        self.visible = True
         self.fire_and_forget = False
-
-        if 'visible' in description:
-            self.visible = description['visible']
 
         # Check 'min' and 'max' for backwards compatibility
         if 'min' in description:
@@ -61,7 +57,6 @@ class Property:
         prop = {
             'name': self.name,
             'value': self.value,
-            'visible': self.visible,
         }
         prop.update(self.description)
         return prop
@@ -73,10 +68,6 @@ class Property:
         Returns a dictionary describing the property.
         """
         return self.description
-
-    def is_visible(self):
-        """Return whether or not this property is visible."""
-        return self.visible
 
     def set_cached_value_and_notify(self, value):
         """
