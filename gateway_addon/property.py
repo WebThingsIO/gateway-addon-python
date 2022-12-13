@@ -1,6 +1,7 @@
 """High-level Property base class implementation."""
 
 from .errors import PropertyError
+import warnings
 
 
 class Property:
@@ -18,7 +19,14 @@ class Property:
         self.name = name
         self.value = None
         self.description = {}
+        self.visible = True
         self.fire_and_forget = False
+
+        # Check 'visible' for backwards compatibility
+        if 'visible' in description:
+            warnings.warn('''The visible member of property descriptions is
+            deprecated.''', DeprecationWarning)
+            self.visible = description['visible']
 
         # Check 'min' and 'max' for backwards compatibility
         if 'min' in description:
@@ -57,6 +65,7 @@ class Property:
         prop = {
             'name': self.name,
             'value': self.value,
+            'visible': self.visible,
         }
         prop.update(self.description)
         return prop
