@@ -86,7 +86,7 @@ class IpcClient:
         while not self.registered:
             time.sleep(0.01)
 
-    def on_open(self):
+    def on_open(self, _):
         """Event handler for WebSocket opening."""
         if self.verbose:
             print('IpcClient: Connected to server, registering...')
@@ -102,7 +102,7 @@ class IpcClient:
             print('IpcClient: Failed to send message: {}'.format(e))
             return
 
-    def on_message(self, message):
+    def on_message(self, _, message):
         """
         Event handler for WebSocket messages.
 
